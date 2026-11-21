@@ -31,8 +31,8 @@ header.top{background:var(--surface);color:var(--ink);position:sticky;top:env(sa
 .brand{display:flex;align-items:baseline;gap:10px;min-width:0}
 .brand h1{font-family:var(--f-display);font-weight:400;font-size:26px;margin:0;letter-spacing:.5px;color:var(--indigo)}
 .brand small{color:var(--muted);font-size:12px}
-.tabs{display:flex;gap:4px}
-.tabs a{color:var(--muted);text-decoration:none;padding:7px 14px;border-radius:999px;font-weight:500;font-size:14px}
+.tabs{display:flex;gap:2px;overflow-x:auto;max-width:100%}
+.tabs a{color:var(--muted);text-decoration:none;padding:7px 11px;white-space:nowrap;border-radius:999px;font-weight:500;font-size:14px}
 .tabs a[aria-current="page"]{background:var(--chip);color:var(--indigo);box-shadow:inset 0 -2px 0 var(--gold)}
 .tabs a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 main{padding-block:16px 48px}
@@ -125,6 +125,18 @@ mark{background:color-mix(in srgb,var(--gold) 35%,transparent);color:inherit;bor
 .step.key{background:color-mix(in srgb,var(--gold) 16%,transparent);border-radius:8px;padding:6px;margin:0 -6px}
 .tips{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
 .tips ul{margin:6px 0 0;padding-left:18px;display:grid;gap:6px}
+.dk-filters{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.dk{display:grid;gap:10px}
+.dki{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.dki input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--indigo)}
+.dki.done{opacity:.5}
+.dki .nm{font-weight:700;font-size:15.5px}
+.dki .jp{font-family:var(--f-ja);font-size:16px;color:var(--ink);background:var(--chip);border-radius:6px;padding:2px 8px;display:inline-block;margin:4px 0}
+.dki p{margin:4px 0 0;color:var(--muted);font-size:13.5px}
+.dki .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px;font-size:12.5px}
+.dki .tag{font-weight:700;font-size:11px;padding:1px 7px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.dki a{color:var(--indigo)}
+.dk-count{font-size:13px;color:var(--muted)}
 footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
 @media (prefers-reduced-motion:no-preference){.pin circle.b{transition:stroke-width .15s}}
 </style>
@@ -136,6 +148,7 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
       <a href="#map" data-v="map">지도</a>
       <a href="#brands" data-v="brands">브랜드</a>
       <a href="#plan" data-v="plan">일정</a>
+      <a href="#donki" data-v="donki">돈키</a>
       <a href="#memo" data-v="memo">메모</a>
     </nav>
   </div>
@@ -172,6 +185,16 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
     <p class="sub">진한 칸은 확정된 일정이고, "제안"은 빈 시간에 넣을 만한 후보예요. 장소 이름을 누르면 지도로 이동해요.</p>
     <div class="days" id="days"></div>
   </section>
+  <!-- DONKI -->
+  <section class="view" id="v-donki" hidden>
+    <h2>돈키호테 쇼핑 리스트</h2>
+    <p class="sub">체크한 항목은 이 휴대폰에 저장돼요. 직원에게 일본어 이름을 보여주면 위치를 알려줘요. 사진은 "사진 보기"를 누르면 이미지 검색으로 열려요.</p>
+    <div class="dk-filters" id="dkFilters"></div>
+    <p class="dk-count" id="dkCount"></p>
+    <div class="dk" id="dkList"></div>
+    <p class="sub" style="margin-top:12px">면세(11월부터 환급 방식)를 받으려면 최소 구매 금액이 있어요. 계산할 때 여권을 보여주고 면세가 되는지 물어보세요. 영수증과 산 물건은 출국할 때 공항에서 보여줘야 하니 뜯지 말고 챙기세요. 액체·젤은 위탁 수하물에 넣으세요.</p>
+  </section>
+
   <!-- MEMO -->
   <section class="view" id="v-memo" hidden>
     <h2>내 메모</h2>
@@ -302,7 +325,8 @@ const P=[
  {id:"tetsunabe",cat:"food",ko:"하카타 기온 테츠나베",ja:"博多祇園鉄なべ",addr:"福岡市博多区祇園町2-20",lat:33.5932,lng:130.4122,taxi:"걸어서 3분",hours:"저녁 위주 (확인 필요)",desc:"철판에 구워 나오는 한입 교자예요. 숙소 바로 옆이라 도착한 날 저녁으로 딱이에요."},
  {id:"fullfull",cat:"bakery",ko:"더 풀풀 하카타",ja:"THE FULL FULL HAKATA",addr:"福岡市博多区祇園町9-3",lat:33.5921,lng:130.4113,taxi:"걸어서 2분",hours:"확인 필요 · 092-292-7838",verified:true,desc:"명란 바게트(明太フランス)가 유명한 빵집이에요. 숙소에서 걸어서 갈 수 있으니 아침에 가세요."},
  {id:"dacomecca",cat:"bakery",ko:"다코메카",ja:"DACOMECCA",addr:"福岡市博多区博多駅前1丁目",lat:33.5910,lng:130.4180,taxi:"택시 4분",hours:"아침 7시경부터 (확인 필요)",desc:"화려한 빵이 진열된 인기 빵집이에요. 아침 일찍 가면 덜 붐벼요."},
- {id:"imdonut",cat:"bakery",ko:"아임도넛? 후쿠오카",ja:"I'm donut ? 福岡",addr:"福岡市中央区天神",lat:33.5864,lng:130.4000,taxi:"택시 10분",hours:"확인 필요",desc:"생도넛 맛집이에요. 줄이 길어서 텐진 쇼핑 중간에 들르기 좋아요."},
+ {id:"imdonut",cat:"bakery",ko:"아임도넛? 후쿠오카",ja:"I'm donut ? 福岡店",addr:"福岡市中央区渡辺通5-24-30 東カン福岡第一ビル 1F",lat:33.5853,lng:130.4012,verified:true,hours:"확인 필요",desc:"생도넛으로 유명한 아맘다코탄 계열 가게예요. 텐진미나미역 근처에 있고 아침에도 줄이 길어요."},
+ {id:"bonbon",cat:"bakery",ko:"봉봉 (아임도넛 옆 빵집 후보)",ja:"Bon Bon (ボンボン)",addr:"福岡市中央区渡辺通5-25-13",lat:33.5850,lng:130.4018,verified:false,hours:"확인 필요",desc:"아임도넛 바로 옆 블록에 있는 빵집이에요. 말씀하신 '방토'와 같은 가게인지는 확실하지 않아요. 현지에서 간판을 확인해 보세요."},
  {id:"yoshizuka",cat:"food",ko:"요시즈카 우나기야",ja:"吉塚うなぎ屋",addr:"福岡市博多区中洲2-8-27",lat:33.5912,lng:130.4045,taxi:"택시 6분",hours:"점심~저녁 (확인 필요)",desc:"오래된 장어 노포예요. 앉아서 편하게 먹을 수 있어서 할머니 모시고 가기 좋아요."},
  {id:"hanamidori",cat:"food",ko:"하카타 하나미도리",ja:"博多華味鳥 中洲本店",addr:"福岡市博多区中洲",lat:33.5920,lng:130.4062,taxi:"택시 6분",hours:"저녁 (확인 필요)",desc:"맑은 닭 육수의 미즈타키(닭 전골)예요. 부드러워서 할머니 입맛에 잘 맞을 거예요."},
  {id:"toriden",cat:"food",ko:"미즈타키 토리덴",ja:"水たき とり田 博多本店",addr:"福岡市博多区下川端町",lat:33.5942,lng:130.4078,taxi:"택시 6분",hours:"점심·저녁 (확인 필요)",desc:"미즈타키를 정갈하게 내는 곳이에요. 점심 코스가 부담이 적어요."},
@@ -561,7 +585,7 @@ const DAYS=[
   ["저녁","카니혼케 (게 요리, 택시 약 15분, 예약 권장)",["kanihonke"],"key"],
   ["제안","밤에 나카스 돈키호테 (24시간)",["donki-nakasu"]]]},
  {t:"4일차 · 귀국",d:"11/25 (수)",s:[
-  ["오전","아임도넛 / 방토?",["imdonut"],"key"],
+  ["오전","아임도넛 + 옆 빵집",["imdonut","bonbon"],"key"],
   ["체크아웃","짐은 호텔에 맡기기",["hotel"],"key"],
   ["제안","캐널시티(몽벨·스투시·무인양품) 또는 하카타 데이토스에서 마지막 선물·위스키",["canal","montbell-canal","deitos","yodobashi"]],
   ["제안","면세 환급 수속을 생각해서 출발 2시간 30분 전에는 공항에 도착하기",null],
@@ -570,10 +594,48 @@ const DAYS=[
 document.getElementById("days").innerHTML=DAYS.map(d=>`<article class="day"><header><h3>${d.t}</h3><span class="date">${d.d}${d.hol?'<span class="hol">공휴일</span>':""}</span></header>${d.s.map(([tm,txt,ids,k])=>`<div class="step ${k||""}"><span class="tm">${tm}</span><div>${esc(txt)}${ids?`<div>${ids.map(i=>`<button type="button" data-go="${i}">${esc(BYID[i].ko)}</button>`).join(" · ")}</div>`:k&&tm==="18:45"?`<div><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("すみ劇場 むさし坐 福岡")}" target="_blank" rel="noopener">구글맵에서 위치 확인</a></div>`:""}</div></div>`).join("")}</article>`).join("");
 document.getElementById("days").addEventListener("click",e=>{const b=e.target.closest("button[data-go]");if(!b)return;active.add(BYID[b.dataset.go].cat);chips();list();location.hash="map";select(b.dataset.go);window.scrollTo({top:0})});
 
+
+/* ---------- donki list ---------- */
+const DK=[
+ ["약","이브 A정 (두통약)","イブA錠","일본 국민 진통제예요. 두통·생리통에 써요. 'EX'는 성분이 더 강한 버전이에요."],
+ ["약","카베진 코와 α (위장약)","キャベジンコーワα","과식하거나 속이 더부룩할 때 먹는 위장약이에요. 어른들 선물로 많이 사요."],
+ ["약","오타이산 (가루 소화제)","太田胃散","오래된 가루 소화제예요. 할머니 세대에게 익숙한 맛이에요."],
+ ["약","로이히츠보코 (동전 파스)","ロイヒつぼ膏","어깨나 허리 결릴 때 붙이는 동전 크기 파스예요. 부모님 선물로 인기가 많아요."],
+ ["약","사론파스","サロンパス","붙이는 파스의 정석이에요. 대용량 팩이 저렴해요."],
+ ["생활","휴족시간 (발 쿨링 시트)","休足時間","많이 걸은 날 종아리에 붙이고 자는 쿨링 시트예요. 여행 중에 바로 써도 좋아요."],
+ ["생활","메구리즘 (온열 안대)","めぐりズム 蒸気でホットアイマスク","뜯으면 따뜻해지는 일회용 수면 안대예요. 비행기에서 쓰기 좋아요."],
+ ["생활","유니참 실큐어 화장솜","シルコット","얇고 잘 안 찢어지는 화장솜이에요. 부피가 작아서 많이 사가기 좋아요."],
+ ["뷰티","멜라노CC (비타민C 세럼)","メラノCC 薬用しみ集中対策美容液","저렴한 비타민C 세럼이에요. 잡티 케어용으로 유명해요."],
+ ["뷰티","하다라보 고쿠쥰 (보습 토너)","肌ラボ 極潤ヒアルロン液","끈적이지 않는 히알루론산 보습 토너예요. 큰 용량이 저렴해요."],
+ ["뷰티","비오레 UV 아쿠아리치 (선크림)","ビオレUV アクアリッチ ウォータリーエッセンス","가볍게 발리는 선크림이에요. 일본에서 사는 게 훨씬 싸요."],
+ ["뷰티","센카 퍼펙트 휩 (폼클렌저)","専科 パーフェクトホイップ","거품이 쫀쫀한 세안 폼이에요. 여러 개 묶음이 저렴해요."],
+ ["뷰티","키스미 히로인메이크 마스카라","ヒロインメイク マスカラ","번지지 않는 마스카라로 유명해요."],
+ ["뷰티","캔메이크 (아이섀도·블러셔)","キャンメイク","저렴한 일본 색조 브랜드예요. 매장 진열대가 따로 있어요."],
+ ["간식","킷캣 일본 한정맛","キットカット 限定","말차, 딸기 같은 일본 한정 맛이 있어요. 나눠주기 좋은 선물이에요."],
+ ["간식","자가리코","じゃがりこ","컵에 든 감자 스틱 과자예요. 지역 한정 맛이 나오기도 해요."],
+ ["간식","알포트 초콜릿","アルフォート","배 그림이 그려진 비스킷 초콜릿이에요. 대용량 팩이 있어요."],
+ ["간식","곤약젤리 (짜먹는 젤리)","蒟蒻畑","과일맛 곤약 젤리예요. 할머니는 목에 걸리지 않게 조심하세요."],
+ ["간식","하이츄 / 뿌칭 (젤리 캔디)","ハイチュウ / ぷっちょ","한국보다 맛 종류가 훨씬 많아요."],
+ ["간식","명란 맛 과자 (후쿠오카 한정)","明太子 スナック","후쿠오카 돈키호테에는 명란 맛 과자 코너가 따로 있는 경우가 많아요. 선물용으로 좋아요."],
+ ["술","산토리 가쿠빈 / 짐빔 하이볼 캔","角ハイボール 缶","호텔에서 마시기 좋은 하이볼 캔이에요. 귀국할 때 술 면세 한도(1인 2병, 2L)를 생각하세요."],
+ ["술","야마자키 / 하쿠슈 / 히비키 (있으면)","山崎 / 白州 / 響","돈키호테에서도 가끔 들어와요. 보통 계산대 뒤나 유리장 안에 있고 1인 1병 제한이 많아요."]
+];
+const dkKey="fk.donki";let dkDone=new Set();try{dkDone=new Set(JSON.parse(localStorage.getItem(dkKey)||"[]"))}catch(e){}
+let dkCat="전체";
+function dkRender(){
+  const cats=["전체",...new Set(DK.map(d=>d[0]))];
+  document.getElementById("dkFilters").innerHTML=cats.map(c=>`<button type="button" class="chip" aria-pressed="${c===dkCat}" data-c="${c}">${c}</button>`).join("");
+  const rows=DK.map((d,i)=>[d,i]).filter(([d])=>dkCat==="전체"||d[0]===dkCat);
+  document.getElementById("dkCount").textContent=`${dkDone.size} / ${DK.length}개 담음`;
+  document.getElementById("dkList").innerHTML=rows.map(([[c,ko,ja,desc],i])=>`<label class="dki${dkDone.has(i)?" done":""}"><input type="checkbox" id="dk${i}" data-i="${i}" ${dkDone.has(i)?"checked":""}><div><div class="nm">${esc(ko)}</div><span class="jp">${esc(ja)}</span><p>${esc(desc)}</p><div class="row"><span class="tag">${esc(c)}</span><a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(ja)}" target="_blank" rel="noopener">사진 보기 ↗</a></div></div></label>`).join("");
+}
+document.getElementById("dkFilters").addEventListener("click",e=>{const b=e.target.closest("button[data-c]");if(!b)return;dkCat=b.dataset.c;dkRender()});
+document.getElementById("dkList").addEventListener("change",e=>{const i=+e.target.dataset.i;e.target.checked?dkDone.add(i):dkDone.delete(i);try{localStorage.setItem(dkKey,JSON.stringify([...dkDone]))}catch(_){}dkRender()});
+dkRender();
 /* ---------- router ---------- */
 function route(){
-  const v=["map","brands","plan","memo"].includes(location.hash.slice(1))?location.hash.slice(1):"map";
-  ["map","brands","plan","memo"].forEach(k=>document.getElementById("v-"+k).hidden=k!==v);
+  const v=["map","brands","plan","donki","memo"].includes(location.hash.slice(1))?location.hash.slice(1):"map";
+  ["map","brands","plan","donki","memo"].forEach(k=>document.getElementById("v-"+k).hidden=k!==v);
   document.querySelectorAll(".tabs a").forEach(a=>{if(a.dataset.v===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
 }
 window.addEventListener("hashchange",route);
