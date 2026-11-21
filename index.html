@@ -606,6 +606,7 @@ const DK=[
  ["두통약","이브 퀵 두통약 DX","イブクイック頭痛薬DX","두통만 있을 때 먹는 진통제예요. 한 번에 2알이에요.",""],
  ["두통약","이브 A정 / 이브 A정 EX","イブA錠 / イブA錠EX","같은 이브 시리즈예요. 퀵보다 순하고, EX는 성분이 더 강한 버전이에요.",""],
  ["두통약","록소닌 S","ロキソニンS","한 알로 듣는 진통제예요. 약사가 있는 계산대에서만 살 수 있어서(1류 의약품) 돈키호테 약국 코너 운영 시간에 가야 해요.",""],
+ ["숙취약","카베진 코와 α ★","キャベジンコーワα","원래는 위장약인데, 술 마신 뒤 쓰린 속을 달래려고 한국 사람들이 숙취약처럼 많이 사요. 어른들 선물로도 인기예요. 숙취 자체(두통, 피로)에는 헤파리제가 더 맞아요.","필수"],
  ["숙취약","헤파리제 W / 헤파리제 플러스","ヘパリーゼW / ヘパリーゼプラス","일본에서 가장 유명한 숙취 해소제예요. 알약과 드링크 둘 다 있어요. 술 마시기 전후에 먹어요.","필수"],
  ["숙취약","우콘노 치카라 (울금 드링크)","ウコンの力","편의점에도 있는 울금 드링크예요. 마시기 전에 한 병 먹어요.","필수"],
  ["숙취약","솔마크 (위장 드링크)","ソルマック","술 마신 다음 날 속이 쓰릴 때 먹는 위장약 드링크예요.","필수"],
@@ -636,7 +637,6 @@ const DK=[
  ["초콜릿","포키 한정맛","ポッキー 限定","일본에서만 나오는 맛이 있어요.",""],
  ["초콜릿","메이지 더 초콜릿","明治 ザ・チョコレート","카카오 함량별로 나온 고급 판 초콜릿이에요. 어른 선물용으로 좋아요.",""],
  ["초콜릿","도쿄바나나 / 시로이코이비토 (있으면)","東京ばな奈 / 白い恋人","돈키호테에서 가끔 파는 유명 과자 선물이에요.",""],
- ["기타 추천","카베진 코와 α (위장약)","キャベジンコーワα","과식하거나 속이 더부룩할 때 먹는 위장약이에요. 어른들 선물로 많이 사요.",""],
  ["기타 추천","로이히츠보코 (동전 파스)","ロイヒつぼ膏","어깨나 허리 결릴 때 붙이는 동전 크기 파스예요. 할머니께 좋아요.",""],
  ["기타 추천","휴족시간 (발 쿨링 시트)","休足時間","많이 걸은 날 종아리에 붙이고 자는 쿨링 시트예요.",""],
  ["기타 추천","메구리즘 (온열 안대)","めぐりズム 蒸気でホットアイマスク","뜯으면 따뜻해지는 일회용 수면 안대예요.",""],
@@ -644,17 +644,17 @@ const DK=[
  ["기타 추천","멜라노CC (비타민C 세럼)","メラノCC","저렴한 비타민C 세럼이에요.",""],
  ["기타 추천","산토리 가쿠 하이볼 캔","角ハイボール 缶","호텔에서 마시기 좋은 하이볼 캔이에요.",""]
 ];
-const dkKey="fk.donki4";let dkDone=new Set();try{dkDone=new Set(JSON.parse(localStorage.getItem(dkKey)||"[]"))}catch(e){}
+const dkKey="fk.donki5";let dkDone=new Set();try{dkDone=new Set(JSON.parse(localStorage.getItem(dkKey)||"[]"))}catch(e){}
 let dkCat="전체";
 function dkRender(){
   const cats=["전체",...new Set(DK.map(d=>d[0]))];
   document.getElementById("dkFilters").innerHTML=cats.map(c=>`<button type="button" class="chip" aria-pressed="${c===dkCat}" data-c="${c}">${c}</button>`).join("");
   const rows=DK.map((d,i)=>[d,i]).filter(([d])=>dkCat==="전체"||d[0]===dkCat);
-  document.getElementById("dkCount").textContent=`${dkDone.size} / ${DK.length}개 담음`;
-  document.getElementById("dkList").innerHTML=rows.map(([[c,ko,ja,desc,must],i])=>`<label class="dki${dkDone.has(i)?" done":""}"><input type="checkbox" id="dk${i}" data-i="${i}" ${dkDone.has(i)?"checked":""}><div><div class="nm">${esc(ko)}</div><span class="jp">${esc(ja)}</span><p>${esc(desc)}</p><div class="row"><span class="tag">${esc(c)}</span>${must?`<span class="tag" style="color:var(--indigo);border-color:var(--indigo)">꼭 사기</span>`:""}<a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(ja)}" target="_blank" rel="noopener">사진 보기 ↗</a></div></div></label>`).join("");
+  document.getElementById("dkCount").textContent=`${DK.filter(d=>dkDone.has(d[2])).length} / ${DK.length}개 담음`;
+  document.getElementById("dkList").innerHTML=rows.map(([[c,ko,ja,desc,must],i])=>`<label class="dki${dkDone.has(ja)?" done":""}"><input type="checkbox" id="dk${i}" data-i="${i}" ${dkDone.has(ja)?"checked":""}><div><div class="nm">${esc(ko)}</div><span class="jp">${esc(ja)}</span><p>${esc(desc)}</p><div class="row"><span class="tag">${esc(c)}</span>${must?`<span class="tag" style="color:var(--indigo);border-color:var(--indigo)">꼭 사기</span>`:""}<a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(ja)}" target="_blank" rel="noopener">사진 보기 ↗</a></div></div></label>`).join("");
 }
 document.getElementById("dkFilters").addEventListener("click",e=>{const b=e.target.closest("button[data-c]");if(!b)return;dkCat=b.dataset.c;dkRender()});
-document.getElementById("dkList").addEventListener("change",e=>{const i=+e.target.dataset.i;e.target.checked?dkDone.add(i):dkDone.delete(i);try{localStorage.setItem(dkKey,JSON.stringify([...dkDone]))}catch(_){}dkRender()});
+document.getElementById("dkList").addEventListener("change",e=>{const k=DK[+e.target.dataset.i][2];e.target.checked?dkDone.add(k):dkDone.delete(k);try{localStorage.setItem(dkKey,JSON.stringify([...dkDone]))}catch(_){}dkRender()});
 dkRender();
 /* ---------- router ---------- */
 function route(){
