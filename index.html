@@ -149,6 +149,9 @@ mark{background:color-mix(in srgb,var(--gold) 35%,transparent);color:inherit;bor
 .num{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .num th,.num td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left}
 .num th{color:var(--muted);font-weight:500;font-size:12px}
+.sresults{margin:4px 0 14px;display:grid;gap:8px}
+.sr-h{font-weight:700;font-size:13px;color:var(--muted);letter-spacing:.04em;margin-top:4px}
+.sr-places{margin-top:0}
 footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
 @media (prefers-reduced-motion:no-preference){.pin circle.b{transition:stroke-width .15s}}
 </style>
@@ -175,6 +178,7 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
     <div class="search"><input id="mq" type="search" placeholder="장소·백화점·브랜드 검색 (예: 한큐, 이와타야, 셀린느, 우동)" autocomplete="off" aria-label="지도 검색"></div>
     <div class="chips" id="catChips"></div>
     <p class="sub" id="mqInfo" hidden></p>
+    <div class="sresults" id="mqResults" hidden></div>
     <div class="maplayout">
       <div class="mapbox">
         <svg id="map" viewBox="0 0 1000 560" role="img" aria-label="하카타·나카스·텐진 간이 지도"></svg>
@@ -188,8 +192,8 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
   <!-- BRANDS -->
   <section class="view" id="v-brands" hidden>
     <h2>브랜드 어디 있지?</h2>
-    <p class="sub">한글이나 영어로 검색하세요. 예: 셀린느, moncler, 포터, 몽벨</p>
-    <div class="search"><input id="q" type="search" placeholder="브랜드 이름 검색" autocomplete="off" aria-label="브랜드 검색"></div>
+    <p class="sub">지도 탭 검색창과 연결돼 있어서 어디서 검색해도 같은 결과가 나와요. 예: 셀린느, moncler, 한큐, 우동</p>
+    <div class="search"><input id="q" type="search" placeholder="브랜드·장소 검색 (예: 셀린느, 한큐, 우동)" autocomplete="off" aria-label="브랜드 검색"></div>
     <div class="blist" id="brandList"></div>
   </section>
 
@@ -575,8 +579,8 @@ let mq="";
 function brandHits(q){const h=new Set();if(!q)return h;B.forEach(([d,a,w])=>{if(norm(d).includes(q)||a.split(" ").some(x=>norm(x).includes(q)))w.forEach(([sid])=>h.add(sid))});return h}
 function visible(){
   if(!mq)return P.filter(p=>active.has(p.cat)||p.cat==="hotel");
-  const bh=brandHits(mq);
-  return P.filter(p=>p.cat==="hotel"||bh.has(p.id)||norm([p.ko,p.ja,p.addr||"",p.desc||"",CATS[p.cat].ko].join(" ")).includes(mq));
+  const {places,brands}=searchHits(mq);const ids=new Set(places.map(p=>p.id));brands.forEach(([,,w])=>w.forEach(([sid])=>ids.add(sid)));
+  return P.filter(p=>p.cat==="hotel"||ids.has(p.id));
 }
 function drawPins(){
   pinLayer.innerHTML="";
@@ -653,21 +657,45 @@ function phraseBlock(p){
 }
 /* ---------- brands ---------- */
 const q=document.getElementById("q");
-function brands(){
-  const s=norm(q.value);store("fk.q",q.value);
-  const rows=B.filter(([d,a])=>!s||norm(d).includes(s)||a.split(" ").some(x=>norm(x).includes(s)));
-  const box=document.getElementById("brandList");
-  if(!rows.length){box.innerHTML=`<p class="empty">“${esc(q.value)}” 브랜드는 아직 목록에 없어요. 하카타 한큐와 이와타야 공식 층별 안내에서 확인해 보세요.</p>`;return}
-  box.innerHTML=rows.map(([d,a,w])=>`<div class="bi"><div><div class="bn">${esc(d)}</div><div class="bk">${esc(a.split(" ")[0])}</div></div><div class="where">${w.map(([sid,f])=>`<button type="button" data-s="${sid}" data-b="${esc(d)}"><b>${esc(BYID[sid].ko)}</b> · ${esc(f)}</button>`).join("")}</div></div>`).join("");
+function brandRow([d,a,w]){return `<div class="bi"><div><div class="bn">${esc(d)}</div><div class="bk">${esc(a.split(" ")[0])}</div></div><div class="where">${w.map(([sid,f])=>`<button type="button" data-s="${sid}" data-b="${esc(d)}"><b>${esc(BYID[sid].ko)}</b> · ${esc(f)}</button>`).join("")}</div></div>`}
+function searchHits(k){
+  const places=P.filter(p=>p.cat!=="hotel").map(p=>{const nm=norm(p.ko+" "+p.ja);const rest=norm([p.addr||"",p.desc||"",CATS[p.cat].ko,(p.floors||[]).flat().join(" ")].join(" "));return [p,nm.includes(k)?2:rest.includes(k)?1:0]}).filter(([,r])=>r).sort((a,b)=>b[1]-a[1]).map(([p])=>p);
+  const brands=B.map(r=>{const[d,a]=r;const sc=norm(d).includes(k)?2:a.split(" ").some(x=>norm(x).includes(k))?1:0;return[r,sc]}).filter(([,sc])=>sc).sort((a,b)=>b[1]-a[1]).map(([r])=>r);
+  return {places,brands};
 }
-document.getElementById("brandList").addEventListener("click",e=>{
+function searchHTML(k,raw){
+  const {places,brands}=searchHits(k);
+  if(!places.length&&!brands.length)return `<p class="empty">“${esc(raw)}”에 맞는 장소나 브랜드가 없어요. 다른 이름(한글·영어·일본어)으로 검색해 보세요.</p>`;
+  let h="";
+  if(brands.length)h+=`<div class="sr-h">브랜드 ${brands.length}</div><div class="blist">${brands.map(brandRow).join("")}</div>`;
+  if(places.length)h+=`<div class="sr-h">장소 ${places.length}</div><div class="placelist sr-places">${places.map(p=>`<button type="button" class="pl" data-p="${p.id}"><span class="g" style="background:var(${CATS[p.cat].c});${p.cat==='donki'?'color:#1b2140':''}">${CATS[p.cat].g}</span><span class="n">${esc(p.ko)}</span><span class="m">${(m=>m.walk<=12?"🚶 "+m.walk+"분":"🚕 "+m.taxi+"분")(moves(p))}</span></button>`).join("")}</div>`;
+  return h;
+}
+let searchRaw="";
+function runSearch(val){
+  searchRaw=val;const k=norm(val);
+  ["q","mq"].forEach(id=>{const el=document.getElementById(id);if(el&&el.value!==val)el.value=val});
+  store("fk.q",val);
+  mq=k;drawPins();list();
+  const info=document.getElementById("mqInfo"),res=document.getElementById("mqResults");
+  const hits=k?searchHits(k):null;
+  info.hidden=!k;if(k)info.textContent=`“${val}” 검색 결과: 브랜드 ${hits.brands.length} · 장소 ${hits.places.length} (지도에는 관련 장소만 보여요)`;
+  res.hidden=!k;res.innerHTML=k?searchHTML(k,val):"";
+  document.getElementById("brandList").innerHTML=k?searchHTML(k,val):B.map(brandRow).join("");
+  const n=visible().filter(p=>p.cat!=="hotel");if(k&&n.length===1)select(n[0].id,[k]);
+}
+function brands(){runSearch(q.value)}
+function onResultClick(e){
+  const pb=e.target.closest("button[data-p]");
+  if(pb){location.hash="map";select(pb.dataset.p,mq?[mq]:undefined);document.getElementById("sheet").scrollIntoView({behavior:"smooth",block:"start"});return}
   const b=e.target.closest("button[data-s]");if(!b)return;
   const name=b.dataset.b.split(/[(\/]/)[0].trim();
-  active.add(BYID[b.dataset.s].cat);chips();list();
   location.hash="map";select(b.dataset.s,[norm(name)]);
-  window.scrollTo({top:0});
-});
-q.addEventListener("input",brands);
+  document.getElementById("sheet").scrollIntoView({behavior:"smooth",block:"start"});
+}
+document.getElementById("mqResults").addEventListener("click",onResultClick);
+document.getElementById("brandList").addEventListener("click",onResultClick);
+q.addEventListener("input",e=>runSearch(e.target.value));
 
 /* ---------- plan ---------- */
 const DAYS=[
@@ -773,12 +801,7 @@ document.getElementById("dkList").addEventListener("change",e=>{const k=DK[+e.ta
 dkRender();
 
 /* ---------- tab searches ---------- */
-document.getElementById("mq").addEventListener("input",e=>{
-  mq=norm(e.target.value);drawPins();list();
-  const n=visible().filter(p=>p.cat!=="hotel"),info=document.getElementById("mqInfo");
-  info.hidden=!mq;info.textContent=n.length?`검색 결과 ${n.length}곳 (카테고리 버튼과 상관없이 모두 찾아요)`:"검색 결과가 없어요. 브랜드 탭에서도 찾아보세요.";
-  if(n.length===1)select(n[0].id,[mq]);
-});
+document.getElementById("mq").addEventListener("input",e=>runSearch(e.target.value));
 function textFilter(q,items,hideEmpty){const k=norm(q);items.forEach(el=>{el.hidden=!!k&&!norm(el.textContent).includes(k)});}
 document.getElementById("pq").addEventListener("input",e=>{
   const k=norm(e.target.value);let any=false;
