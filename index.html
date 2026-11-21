@@ -162,7 +162,9 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
   <section class="view" id="v-map">
     <h2>숙소 기준 지도</h2>
     <p class="sub">★ 미쓰이 가든 기온을 기준으로 한 택시 시간이에요. 핀을 누르면 층별 안내와 택시 카드가 나와요.</p>
+    <div class="search"><input id="mq" type="search" placeholder="장소·백화점·브랜드 검색 (예: 한큐, 이와타야, 셀린느, 우동)" autocomplete="off" aria-label="지도 검색"></div>
     <div class="chips" id="catChips"></div>
+    <p class="sub" id="mqInfo" hidden></p>
     <div class="maplayout">
       <div class="mapbox">
         <svg id="map" viewBox="0 0 1000 560" role="img" aria-label="하카타·나카스·텐진 간이 지도"></svg>
@@ -185,12 +187,15 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
   <section class="view" id="v-plan" hidden>
     <h2>4일 일정</h2>
     <p class="sub">진한 칸은 확정된 일정이고, "제안"은 빈 시간에 넣을 만한 후보예요. 장소 이름을 누르면 지도로 이동해요.</p>
+    <div class="search"><input id="pq" type="search" placeholder="일정 검색 (예: 텐진, 우동, 23일)" autocomplete="off" aria-label="일정 검색"></div>
     <div class="days" id="days"></div>
+    <p class="empty" id="pqEmpty" hidden>검색 결과가 없어요.</p>
   </section>
   <!-- DONKI -->
   <section class="view" id="v-donki" hidden>
     <h2>돈키호테 쇼핑 리스트</h2>
     <p class="sub">체크한 항목은 이 휴대폰에 저장되고, 🛒 장바구니 버튼을 누르면 담은 것만 모아 볼 수 있어요. 직원에게 일본어 이름을 보여주면 위치를 알려줘요. 사진은 "사진 보기"를 누르면 이미지 검색으로 열려요.</p>
+    <div class="search"><input id="dq" type="search" placeholder="물건 검색 (예: 젤리, 두통, 자가비)" autocomplete="off" aria-label="돈키 리스트 검색"></div>
     <div class="dk-filters" id="dkFilters"></div>
     <p class="dk-count" id="dkCount"></p>
     <div class="dk" id="dkList"></div>
@@ -201,6 +206,7 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
   <section class="view" id="v-memo" hidden>
     <h2>내 메모</h2>
     <p class="sub">여행 전에 알아둘 것과 개인 메모를 모아뒀어요.</p>
+    <div class="search"><input id="memq" type="search" placeholder="메모 검색 (예: 면세, 위스키, 택시)" autocomplete="off" aria-label="메모 검색"></div>
     <div class="tips">
       <b>꼭 알아둘 것</b>
       <ul>
@@ -513,9 +519,16 @@ drawBase();
 const pinLayer=el("g",{});
 let active=new Set(JSON.parse(load("fk.cats")||"null")||Object.keys(CATS));
 let selected=load("fk.sel")||"hankyu";
+let mq="";
+function brandHits(q){const h=new Set();if(!q)return h;B.forEach(([d,a,w])=>{if(norm(d).includes(q)||a.split(" ").some(x=>norm(x).includes(q)))w.forEach(([sid])=>h.add(sid))});return h}
+function visible(){
+  if(!mq)return P.filter(p=>active.has(p.cat)||p.cat==="hotel");
+  const bh=brandHits(mq);
+  return P.filter(p=>p.cat==="hotel"||bh.has(p.id)||norm([p.ko,p.ja,p.addr||"",p.desc||"",CATS[p.cat].ko].join(" ")).includes(mq));
+}
 function drawPins(){
   pinLayer.innerHTML="";
-  P.filter(p=>active.has(p.cat)||p.cat==="hotel").sort((a,b)=>(a.id===selected)-(b.id===selected)).forEach(p=>{
+  visible().sort((a,b)=>(a.id===selected)-(b.id===selected)).forEach(p=>{
     const g=el("g",{class:"pin "+p.cat+(p.id===selected?" sel":""),tabindex:0,role:"button","aria-label":p.ko,transform:`translate(${Math.min(W-16,Math.max(16,px(p.lng)))},${Math.min(H-16,Math.max(16,py(p.lat)))})`},pinLayer);
     const r=p.cat==="hotel"?17:13;
     if(p.cat==="hotel")el("circle",{r:30,fill:"var(--c-hotel)",opacity:.18},g);
@@ -536,7 +549,7 @@ function chips(){
 }
 function list(){
   const box=document.getElementById("placeList");box.innerHTML="";
-  P.filter(p=>active.has(p.cat)||p.cat==="hotel").forEach(p=>{
+  visible().forEach(p=>{
     const b=document.createElement("button");b.className="pl";b.type="button";
     b.innerHTML=`<span class="g" style="background:var(${CATS[p.cat].c});${p.cat==='donki'?'color:#1b2140':''}">${p.cat==="hotel"?"★":CATS[p.cat].g}</span><span class="n">${esc(p.ko)}</span><span class="m">${(m=>!m?"숙소":m.walk<=12?"🚶 도보 "+m.walk+"분":"🚕 택시 "+m.taxi+"분")(moves(p))}</span>`;
     b.onclick=()=>{select(p.id);document.getElementById("sheet").scrollIntoView({behavior:"smooth",block:"nearest"})};
@@ -672,11 +685,11 @@ const DK=[
  ["기타 추천","산토리 가쿠 하이볼 캔","角ハイボール 缶","호텔에서 마시기 좋은 하이볼 캔이에요.",""]
 ];
 const dkKey="fk.donki5";let dkDone=new Set();try{dkDone=new Set(JSON.parse(localStorage.getItem(dkKey)||"[]"))}catch(e){}
-let dkCat="전체";
+let dkCat="전체",dq="";
 function dkRender(){
   const nCart=DK.filter(d=>dkDone.has(d[2])).length;const cats=["전체",...new Set(DK.map(d=>d[0])),"장바구니"];
   document.getElementById("dkFilters").innerHTML=cats.map(c=>`<button type="button" class="chip${c==="장바구니"?" cart":""}" aria-pressed="${c===dkCat}" data-c="${c}">${c==="장바구니"?"🛒 장바구니 "+nCart:c}</button>`).join("");
-  const rows=DK.map((d,i)=>[d,i]).filter(([d])=>dkCat==="전체"||(dkCat==="장바구니"?dkDone.has(d[2]):d[0]===dkCat));
+  const rows=DK.map((d,i)=>[d,i]).filter(([d])=>(dkCat==="전체"||(dkCat==="장바구니"?dkDone.has(d[2]):d[0]===dkCat))&&(!dq||norm(d.slice(0,4).join(" ")).includes(dq)));
   document.getElementById("dkCount").textContent=`${DK.filter(d=>dkDone.has(d[2])).length} / ${DK.length}개 담음`;
   if(dkCat==="장바구니"&&!rows.length){document.getElementById("dkList").innerHTML=`<p class="empty">아직 담은 게 없어요. 목록에서 체크하면 여기에 모여요.</p>`;return}
   document.getElementById("dkList").innerHTML=rows.map(([[c,ko,ja,desc,must],i])=>`<label class="dki${dkDone.has(ja)?" done":""}"><input type="checkbox" id="dk${i}" data-i="${i}" ${dkDone.has(ja)?"checked":""}><div><div class="nm">${esc(ko)}</div><span class="jp">${esc(ja)}</span><p>${esc(desc)}</p><div class="row"><span class="tag">${esc(c)}</span>${must?`<span class="tag" style="color:var(--indigo);border-color:var(--indigo)">꼭 사기</span>`:""}<a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(ja)}" target="_blank" rel="noopener">사진 보기 ↗</a></div></div></label>`).join("");
@@ -684,6 +697,30 @@ function dkRender(){
 document.getElementById("dkFilters").addEventListener("click",e=>{const b=e.target.closest("button[data-c]");if(!b)return;dkCat=b.dataset.c;dkRender()});
 document.getElementById("dkList").addEventListener("change",e=>{const k=DK[+e.target.dataset.i][2];e.target.checked?dkDone.add(k):dkDone.delete(k);try{localStorage.setItem(dkKey,JSON.stringify([...dkDone]))}catch(_){}dkRender()});
 dkRender();
+
+/* ---------- tab searches ---------- */
+document.getElementById("mq").addEventListener("input",e=>{
+  mq=norm(e.target.value);drawPins();list();
+  const n=visible().filter(p=>p.cat!=="hotel"),info=document.getElementById("mqInfo");
+  info.hidden=!mq;info.textContent=n.length?`검색 결과 ${n.length}곳 (카테고리 버튼과 상관없이 모두 찾아요)`:"검색 결과가 없어요. 브랜드 탭에서도 찾아보세요.";
+  if(n.length===1)select(n[0].id,[mq]);
+});
+function textFilter(q,items,hideEmpty){const k=norm(q);items.forEach(el=>{el.hidden=!!k&&!norm(el.textContent).includes(k)});}
+document.getElementById("pq").addEventListener("input",e=>{
+  const k=norm(e.target.value);let any=false;
+  document.querySelectorAll("#days .day").forEach(day=>{
+    const head=norm(day.querySelector("header").textContent).includes(k);
+    let hit=false;day.querySelectorAll(".step").forEach(st=>{const m=!k||head||norm(st.textContent).includes(k);st.hidden=!m;hit=hit||m});
+    day.hidden=!hit;any=any||hit;
+  });
+  document.getElementById("pqEmpty").hidden=any;
+});
+document.getElementById("dq").addEventListener("input",e=>{dq=norm(e.target.value);dkRender()});
+document.getElementById("memq").addEventListener("input",e=>{
+  const k=norm(e.target.value);
+  document.querySelectorAll("#v-memo li, #v-memo .feature p").forEach(el=>{el.hidden=!!k&&!norm(el.textContent).includes(k)});
+  document.querySelectorAll("#v-memo .tips, #v-memo .feature").forEach(b=>{b.hidden=!!k&&!norm(b.textContent).includes(k)});
+});
 /* ---------- router ---------- */
 function route(){
   const v=["map","brands","plan","donki","memo"].includes(location.hash.slice(1))?location.hash.slice(1):"map";
