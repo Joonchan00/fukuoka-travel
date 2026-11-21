@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Fukuoka Travel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+/* Layout: sticky tab bar; Map view = schematic SVG of Hakata–Tenjin with place sheet beside (desktop) or below (phone). Brand view = search index. Plan view = 4-day list. */
+:root{
+  /* single light theme by request: white, muted gray text, desaturated blue + yellow accents */
+  --bg:#ffffff; --surface:#ffffff; --ink:#33373b; --muted:#6e747a; --line:#e2e5e8;
+  --indigo:#2f5577; --gold:#c9a63a; --river:#d5e1eb; --land:#f6f7f8; --block:#eceef0;
+  --c-dept:#2f5577; --c-donki:#d6b445; --c-food:#4c5258; --c-bakery:#a8843a; --c-shop:#6a8aa6; --c-hotel:#33373b;
+  --c-life:#8b939b; --c-cafe:#8a6d2a; --c-liquor:#3d4f63; --navy:#22385a;
+  --chip:#f1f3f5; --ok:#2f5577; --warn:#9a7a2c;
+  color-scheme:light;
+  --f-display:"Do Hyeon","IBM Plex Sans KR",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,sans-serif;
+  --f-ja:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--surface);color:var(--ink);position:sticky;top:env(safe-area-inset-top,0px);z-index:5;border-bottom:1px solid var(--line)}
+.kenjo{height:6px;background:var(--navy)}
+.toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 8px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:26px;margin:0;letter-spacing:.5px;color:var(--indigo)}
+.brand small{color:var(--muted);font-size:12px}
+.tabs{display:flex;gap:4px}
+.tabs a{color:var(--muted);text-decoration:none;padding:7px 14px;border-radius:999px;font-weight:500;font-size:14px}
+.tabs a[aria-current="page"]{background:var(--chip);color:var(--indigo);box-shadow:inset 0 -2px 0 var(--gold)}
+.tabs a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+main{padding-block:16px 48px}
+.view[hidden]{display:none}
+h2{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin:0}
+
+/* filters */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip .dot{width:9px;height:9px;border-radius:50%}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip:focus-visible,button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* map layout */
+.maplayout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.maplayout{grid-template-columns:minmax(0,1fr)}}
+.mapbox{background:var(--land);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative}
+.mapbox svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.pin{cursor:pointer}
+.pin circle.b{stroke:var(--surface);stroke-width:2.5}
+.pin text{font-family:var(--f-body);font-weight:700;font-size:15px;fill:#fff;pointer-events:none}
+.pin.donki text{fill:#1b2140;font-size:11px}
+.pin.sel circle.b{stroke:var(--gold);stroke-width:5}
+.pin:focus{outline:none}.pin:focus-visible circle.b{stroke:var(--gold);stroke-width:5}
+.lbl{font-family:var(--f-display);fill:var(--muted);font-size:22px;opacity:.75}
+.lbl.sm{font-size:16px}
+.legend-note{font-size:12px;color:var(--muted);padding:8px 12px;border-top:1px solid var(--line);background:var(--surface)}
+
+/* sheet */
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px;min-width:0}
+.sheet .cat{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+.sheet h3{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;line-height:1.2}
+.ja{font-family:var(--f-ja);color:var(--muted);font-size:14px}
+.facts{display:flex;flex-wrap:wrap;gap:6px}
+.fact{background:var(--chip);border-radius:8px;padding:4px 9px;font-size:13px;font-variant-numeric:tabular-nums}
+.sheet p{margin:0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:9px 14px;font:inherit;font-weight:700;font-size:14px;text-decoration:none;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--indigo);color:#fff;border-color:transparent}
+.floors{display:grid;gap:0;border-top:1px solid var(--line)}
+.floor{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.floor b{font-variant-numeric:tabular-nums;color:var(--indigo)}
+.floor .t{color:var(--muted);font-size:12px;display:block}
+.src{font-size:12px;color:var(--muted)}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;vertical-align:middle}
+.badge.ok{color:var(--ok);border:1px solid var(--ok)}
+.badge.warn{color:var(--warn);border:1px solid var(--warn)}
+mark{background:color-mix(in srgb,var(--gold) 35%,transparent);color:inherit;border-radius:3px;padding:0 2px}
+
+/* list under map */
+.placelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:16px}
+.pl{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.pl .g{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--f-body);font-weight:700;font-size:12px}
+.pl .n{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl .m{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* taxi card */
+.taxi{position:fixed;inset:0;background:var(--surface);z-index:20;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));text-align:center}
+.taxi .inner{display:grid;gap:18px;max-width:720px}
+.taxi .req{font-family:var(--f-ja);font-size:20px;color:var(--muted)}
+.taxi .dest{font-family:var(--f-ja);font-weight:700;font-size:clamp(34px,9vw,64px);line-height:1.2;color:var(--ink);text-wrap:balance}
+.taxi .addr{font-family:var(--f-ja);font-size:clamp(18px,4.5vw,26px)}
+
+/* brands */
+.search{display:flex;gap:8px;margin:12px 0}
+.search input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.feature{background:var(--surface);border:2px solid var(--gold);border-radius:14px;padding:16px;display:grid;gap:8px;margin-bottom:16px}
+.feature h3{font-family:var(--f-display);font-weight:400;font-size:21px;margin:0}
+.feature ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.blist{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.bi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px;min-width:0}
+.bi .bn{font-weight:700}
+.bi .bk{font-size:12px;color:var(--muted)}
+.where{display:flex;flex-wrap:wrap;gap:6px}
+.where button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:8px;padding:3px 8px;cursor:pointer;text-align:left}
+.where button b{color:var(--indigo)}
+.empty{color:var(--muted);padding:20px 0}
+
+/* plan */
+.days{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;align-content:start}
+.day header{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.day h3{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0}
+.day .date{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hol{font-size:11px;font-weight:700;color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:0 6px;margin-left:4px}
+.step{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;font-size:14px}
+.step .tm{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;padding-top:1px}
+.step button{all:unset;cursor:pointer;color:var(--indigo);font-weight:500;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+.step.key{background:color-mix(in srgb,var(--gold) 16%,transparent);border-radius:8px;padding:6px;margin:0 -6px}
+.tips{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.tips ul{margin:6px 0 0;padding-left:18px;display:grid;gap:6px}
+footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
+@media (prefers-reduced-motion:no-preference){.pin circle.b{transition:stroke-width .15s}}
+</style>
+
+<header class="top">
+  <div class="wrap toprow">
+    <div class="brand"><h1>Fukuoka Travel</h1><small>후쿠오카 · 11/22–11/25</small></div>
+    <nav class="tabs" aria-label="보기">
+      <a href="#map" data-v="map">지도</a>
+      <a href="#brands" data-v="brands">브랜드</a>
+      <a href="#plan" data-v="plan">일정</a>
+      <a href="#memo" data-v="memo">메모</a>
+    </nav>
+  </div>
+  <div class="kenjo" aria-hidden="true"></div>
+</header>
+
+<main class="wrap">
+  <!-- MAP -->
+  <section class="view" id="v-map">
+    <h2>숙소 기준 지도</h2>
+    <p class="sub">★ 미쓰이 가든 기온을 기준으로 한 택시 시간이에요. 핀을 누르면 층별 안내와 택시 카드가 나와요.</p>
+    <div class="chips" id="catChips"></div>
+    <div class="maplayout">
+      <div class="mapbox">
+        <svg id="map" viewBox="0 0 1000 560" role="img" aria-label="하카타·나카스·텐진 간이 지도"></svg>
+        <div class="legend-note">지도 축척은 대략이에요. 도보·택시 시간은 숙소에서 직선거리로 계산한 추정치예요. 할머니 걸음으로는 1.5배쯤 잡으시고, 도보 15분이 넘으면 택시를 타세요.</div>
+      </div>
+      <aside class="sheet" id="sheet" aria-live="polite"></aside>
+    </div>
+    <div class="placelist" id="placeList"></div>
+  </section>
+
+  <!-- BRANDS -->
+  <section class="view" id="v-brands" hidden>
+    <h2>브랜드 어디 있지?</h2>
+    <p class="sub">한글이나 영어로 검색하세요. 예: 셀린느, moncler, 포터, 몽벨</p>
+    <div class="search"><input id="q" type="search" placeholder="브랜드 이름 검색" autocomplete="off" aria-label="브랜드 검색"></div>
+    <div class="blist" id="brandList"></div>
+  </section>
+
+  <!-- PLAN -->
+  <section class="view" id="v-plan" hidden>
+    <h2>4일 동선 초안</h2>
+    <p class="sub">밥과 쇼핑 위주로, 할머니가 편하게 다닐 수 있게 하루에 한 지역씩 묶었어요. 장소 이름을 누르면 지도로 이동해요.</p>
+    <div class="days" id="days"></div>
+  </section>
+  <!-- MEMO -->
+  <section class="view" id="v-memo" hidden>
+    <h2>내 메모</h2>
+    <p class="sub">여행 전에 알아둘 것과 개인 메모를 모아뒀어요.</p>
+    <div class="tips">
+      <b>꼭 알아둘 것</b>
+      <ul>
+        <li><b>11/23(월)은 일본 공휴일</b>(근로감사의 날)이라 일요일과 월요일 이틀 모두 붐벼요. 줄 서는 맛집은 화요일로 미루는 게 좋아요.</li>
+        <li><b>면세가 환급형으로 바뀌었어요(2026년 11월부터).</b> 살 때는 세금을 내고, 출국할 때 공항 세관에서 물건과 영수증을 확인받은 뒤 돌려받아요. 산 물건은 뜯지 말고 영수증은 꼭 챙기세요. 매장 면세 카운터에서 한 번 더 확인하면 확실해요.</li>
+        <li><b>스타벅스 텀블러:</b> 11/20에 홀리데이 굿즈(남색 계열 20종)가 새로 나왔어요. 인기 굿즈는 금방 품절되니 큰 매장부터 가 보세요. "2WAY" 제품이 이번 시즌에 있는지는 확인하지 못했어요. 직원에게 「2WAYのタンブラーはありますか？」라고 물어보세요.</li>
+        <li><b>위스키:</b> 야마자키, 하쿠슈, 히비키 같은 인기 일본 위스키는 매장마다 들어오는 날이 다르고 1인당 1병으로 제한하는 곳이 많아요. 4명이 같이 가면 유리해요. 돈키호테와 백화점 지하 주류 코너도 둘러보세요. 한국 입국 시 술은 1인당 2병(합계 2L, 400달러 이하)까지 면세예요.</li>
+        <li>택시 탈 때는 장소 카드의 <b>택시 카드</b> 버튼을 눌러 기사님께 화면을 보여주세요. 숙소로 돌아갈 때는 ★ 숙소 핀을 누르면 돼요.</li>
+        <li>다이마루 본관 2F 이상은 19시, 이와타야와 다른 백화점은 대개 20시에 문을 닫아요. 명품 쇼핑은 낮 시간에 하세요.</li>
+      </ul>
+    </div>
+    <div style="margin-top:12px">
+    <div class="feature" id="onloewe">
+      <h3>On × LOEWE 찾기</h3>
+      <p><b>2026-27 F/W 신상 (10/15 발매)</b></p>
+      <ul>
+        <li><b>Cloudsolo Hiker</b> (クラウドソロ ハイカー) ¥124,300: 샌드, 다크 카키, 블랙(남성 한정), 폭스 레드(여성 한정)</li>
+        <li><b>Cloudtilt Cosmic</b> (クラウドティルト コズミック) ¥106,700: 화이트, 다크 샌드, 브라이트 오렌지, 블랙(남성 한정), 블랙&amp;화이트·라일락(여성 한정)</li>
+        <li>파카, 패딩, 판초, 카고 팬츠 같은 아웃도어 옷도 함께 나왔어요.</li>
+      </ul>
+      <p>판매처는 "전국 로에베·On <b>일부 매장</b>과 공식 온라인몰"로만 발표됐고, 후쿠오카 매장이 포함되는지는 기사에 없어요. 발매 후 한 달이 지나 인기 사이즈는 빠졌을 수 있으니 <b>가기 전에 꼭 전화로 재고를 확인하세요.</b> 이전 S/S 모델인 LightSpray Cloudmonster는 도쿄 CASA LOEWE에서만 팔았어요.</p>
+      <ul>
+        <li><b>하카타 한큐 1F</b> 로에베 매장, 같은 건물 <b>8F</b>에 On 매장도 있어서 한 번에 확인하기 좋아요. 1순위예요.</li>
+        <li><b>이와타야 신관 1F</b> 로에베 (이와타야 대표 092-721-1111)</li>
+        <li><b>후쿠오카 미쓰코시 1F</b> 로에베 (092-538-3018). 리모델링 중이라 운영 여부를 확인하세요.</li>
+      </ul>
+      <p class="src">일본어로 물어볼 때: 「On×LOEWEの新作（クラウドソロ ハイカー／クラウドティルト コズミック）の在庫はありますか？サイズは◯◯cmです。」 · 로에베 재팬 고객센터 03-6215-6116</p>
+    </div>
+    </div>
+  </section>
+
+  <footer>층별 정보: 하카타 한큐·다이마루·아뮤플라자는 공식 사이트(2026-11-21 확인), 이와타야는 공식 사이트가 열리지 않아 Fashion Press 디렉토리 기준이에요. <span class="badge warn">확인 필요</span> 표시는 직접 확인하지 못한 정보예요. 매장은 바뀔 수 있어요.</footer>
+</main>
+
+<div class="taxi" id="taxi" hidden role="dialog" aria-modal="true" aria-label="택시 카드">
+  <div class="inner">
+    <div class="req">運転手さん、ここまでお願いします 🙏</div>
+    <div class="dest" id="taxiDest"></div>
+    <div class="addr" id="taxiAddr"></div>
+    <div><button class="btn primary" id="taxiClose" type="button">닫기</button></div>
+  </div>
+</div>
+
+<script>
+const CATS={
+  hotel:{ko:"숙소",g:"★",c:"--c-hotel"},
+  dept:{ko:"백화점·몰",g:"D",c:"--c-dept"},
+  shop:{ko:"편집·단독·빈티지",g:"S",c:"--c-shop"},
+  life:{ko:"무인양품·로프트",g:"L",c:"--c-life"},
+  donki:{ko:"돈키호테",g:"DQ",c:"--c-donki"},
+  food:{ko:"맛집",g:"F",c:"--c-food"},
+  bakery:{ko:"빵·디저트",g:"B",c:"--c-bakery"},
+  cafe:{ko:"카페·스벅",g:"C",c:"--c-cafe"},
+  liquor:{ko:"위스키·주류",g:"W",c:"--c-liquor"}
+};
+// lat/lng are approximate
+const P=[
+ {id:"hotel",cat:"hotel",ko:"미쓰이 가든 호텔 기온",ja:"三井ガーデンホテル福岡祇園",addr:"博多区 祇園",lat:33.5922,lng:130.4128,taxi:"숙소",desc:"우리 숙소예요. 돌아갈 때 이 카드를 택시 기사님께 보여주세요."},
+ {id:"hankyu",cat:"dept",ko:"하카타 한큐",ja:"博多阪急",addr:"福岡市博多区博多駅中央街1-1 (JR博多駅)",lat:33.5898,lng:130.4206,taxi:"택시 5분",hours:"보통 10:00–20:00",verified:true,
+  desc:"하카타역과 붙어 있어요. 1F에 에르메스·셀린느·로에베 등 명품이 모여 있고, 8F에 On과 헬리한센이 있어요. 가장 먼저 갈 곳이에요.",
+  floors:[["8F","스포츠·여행가방","On, Helly Hansen, The North Face, ASICS, New Balance, Samsonite"],["7F","리빙·아동","Le Creuset, Staub, Miki House, 아동 노스페이스"],["6F","남성","PORTER, TUMI, Paul Smith, Brooks Brothers, BOSS, Lacoste, Paraboot, Crockett & Jones"],["5F","여성","Theory, Max Mara Weekend, Pleats Please, me Issey Miyake, Aquascutum, Polo Ralph Lauren"],["4F","여성·가방·구두","Coach, Tory Burch, Kate Spade, Furla, Marc Jacobs, Longchamp, Hervé Chapelier, LeSportsac, TATRAS, Camper, J&M Davidson"],["3F","주얼리·명품","RIMOWA, BVLGARI, TASAKI, MIKIMOTO, Rolex"],["2F","남성 크리에이터","Yohji Yamamoto, Y-3, DIESEL, NEIGHBORHOOD, Homme Plissé"],["1F","명품·화장품","HERMÈS, CELINE, LOEWE, GUCCI, Saint Laurent, BALENCIAGA, FENDI, PRADA, Louis Vuitton, Valextra, Tiffany, Cartier, BAO BAO"],["B1","식품","지하 식품관 ‘우마치카’"]]},
+ {id:"amu",cat:"dept",ko:"아뮤플라자 하카타",ja:"アミュプラザ博多",addr:"福岡市博多区博多駅中央街1-1",lat:33.5903,lng:130.4196,taxi:"택시 5분",hours:"10:00–20:00",verified:true,
+  desc:"한큐와 연결돼 있어요. 빔즈, 십스, 유나이티드 애로우즈 같은 일본 편집숍이 모여 있어요.",
+  floors:[["6F","생활","MUJI"],["5F","캐주얼","THE NORTH FACE, A.P.C., UGG, SAINT JAMES, HYSTERIC GLAMOUR"],["4F","편집숍","URBAN RESEARCH, DANTON, FREAK'S STORE, BRIEFING, MHL."],["3F","편집숍","BEAMS, SHIPS, UNITED ARROWS, TOMORROWLAND, EDIFICE / IÉNA, Traditional Weatherwear"],["2F","여성·가방","Felisi, Gianni Chiarini, Mother House"],["1F","잡화","IL BISONTE"]]},
+ {id:"kitte",cat:"dept",ko:"KITTE 하카타 (마루이)",ja:"KITTE博多",addr:"福岡市博多区博多駅中央街9-1",lat:33.5888,lng:130.4193,taxi:"택시 5분",hours:"확인 필요",verified:false,
+  desc:"하카타역 바로 앞에 있어요. 9~10층 식당가에 모츠나베 오오야마가 있어요. 층별 매장은 공식 사이트가 열리지 않아 확인하지 못했어요."},
+ {id:"canal",cat:"dept",ko:"캐널시티 하카타",ja:"キャナルシティ博多",addr:"福岡市博多区住吉1-2",lat:33.5897,lng:130.4110,taxi:"택시 3분 · 걸어서 7분",hours:"보통 10:00–21:00",verified:false,
+  desc:"숙소에서 제일 가까운 대형 몰이에요. 캐주얼 브랜드와 분수쇼가 있고 비 오는 날 가기 좋아요. 매장 목록은 공식 사이트에서 차단돼 확인하지 못했어요."},
+ {id:"riverain",cat:"dept",ko:"하카타 리버레인",ja:"博多リバレイン",addr:"福岡市博多区下川端町3-1",lat:33.5953,lng:130.4068,taxi:"택시 5분",hours:"확인 필요",verified:false,desc:"한적한 쇼핑몰이라 할머니랑 쉬엄쉬엄 둘러보기 좋아요. 바로 옆이 하카타자 극장이에요."},
+ {id:"iwataya",cat:"dept",ko:"이와타야 본점",ja:"岩田屋本店",addr:"福岡市中央区天神2-5-35",lat:33.5879,lng:130.3990,taxi:"택시 10~12분",hours:"보통 10:00–20:00 (확인 필요)",verified:false,
+  desc:"후쿠오카 명품 쇼핑의 중심이에요. 본관과 신관 두 건물로 되어 있어요. 층 정보는 Fashion Press 디렉토리 기준이에요. 대표번호 092-721-1111.",
+  floors:[["신관 2F","명품 여성","CELINE, MONCLER"],["신관 1F","명품·향수·시계","LOEWE (향수 매장 포함)"],["본관 1~2F","명품·화장품","PRADA, CHANEL·DIOR 뷰티"],["층 미확인","","BOTTEGA VENETA, COMME des GARÇONS 라인들 (BLACK, HOMME DEUX 등), kolor, THE NORTH FACE, 에르메스(확인 필요)"],["신관 B2","라이프스타일","The Conran Shop"],["본관 B2","식품","지하 식품관"]]},
+ {id:"daimaru",cat:"dept",ko:"다이마루 후쿠오카 텐진",ja:"大丸福岡天神店",addr:"福岡市中央区天神1-4-1",lat:33.5870,lng:130.4008,taxi:"택시 10분",hours:"B2~1F·엘가라 2F까지 10–20시 / 본관 2F 이상 10–19시",verified:true,
+  desc:"몽클레어와 루이비통이 있어요. 본관과 동관 '엘가라' 두 건물로 되어 있어요.",
+  floors:[["엘가라 4F","시계·여성","Cartier 시계, OMEGA, Grand Seiko, Emporio Armani"],["엘가라 3F","여성","Polo Ralph Lauren, Margaret Howell, Mackintosh Philosophy"],["엘가라 2F","명품","MONCLER, GUCCI, Ferragamo, Burberry, Brunello Cucinelli, GOLDEN GOOSE, Chrome Hearts, Jimmy Choo, Tom Ford, Dsquared2, Versace, Louboutin, HERNO"],["엘가라 1F","명품·화장품","Louis Vuitton, BVLGARI, Cartier, CHANEL 뷰티"],["엘가라 B1","생활","MUJI"],["본관 5F","남성·아웃도어","남성 캐주얼·아웃도어"],["본관 4F","남성","남성복"],["본관 2~3F","여성","Anteprima, Mackintosh London 등"],["본관 1F","잡화·주얼리","Tiffany, Berluti, IL BISONTE, Gucci 액세서리"],["본관 B1","구두·가방·면세","Coach, Michael Kors, LeSportsac, agnès b., New Balance, ASICS, UGG, Camper, 면세 카운터"]]},
+ {id:"mitsukoshi",cat:"dept",ko:"후쿠오카 미쓰코시",ja:"福岡三越",addr:"福岡市中央区天神2-1-1",lat:33.5886,lng:130.3983,taxi:"택시 10~12분",hours:"확인 필요",verified:false,desc:"니시테츠 텐진역 위에 있고 1F에 로에베가 있어요. 2026~2027년 리모델링 중이라 일부 층이 닫혀 있을 수 있어요."},
+ {id:"onebldg",cat:"dept",ko:"원 후쿠오카 빌딩",ja:"ONE FUKUOKA BLDG.",addr:"福岡市中央区天神1-11-1",lat:33.5906,lng:130.3993,taxi:"택시 10분",hours:"확인 필요",verified:false,desc:"2025년에 새로 문을 연 텐진의 랜드마크 빌딩이에요. 구경 삼아 들르기 좋아요."},
+ {id:"parco",cat:"dept",ko:"후쿠오카 파르코 (본관·신관)",ja:"福岡パルコ",addr:"福岡市中央区天神2-11-1",lat:33.5899,lng:130.4004,hours:"보통 10:00–20:30 (확인 필요)",verified:false,desc:"텐진역 바로 위에 있는 20~30대 패션몰이에요. 일본 디자이너 브랜드, 스트리트 브랜드, 캐릭터숍이 많아요. 지하로 텐진 지하상가와 연결돼요."},
+ {id:"solaria",cat:"dept",ko:"솔라리아 플라자",ja:"ソラリアプラザ",addr:"福岡市中央区天神2-2-43",lat:33.5889,lng:130.3976,hours:"평일 11–20시 · 주말·공휴일 10–20시",verified:true,desc:"니시테츠 텐진역 옆에 있는 패션몰이에요. 편집숍과 잡화 매장이 많고 미쓰코시, 이와타야와 붙어 있어요."},
+ {id:"vioro",cat:"dept",ko:"VIORO (비오로)",ja:"VIORO",addr:"福岡市中央区天神2-10-3",lat:33.5896,lng:130.3970,hours:"확인 필요",verified:false,desc:"텐진에 있는 편집숍 중심 쇼핑몰이에요. 1층에 스타벅스 리저브가 있어요."},
+ {id:"chikagai",cat:"dept",ko:"텐진 지하상가",ja:"天神地下街",addr:"福岡市中央区天神2丁目 地下",lat:33.5916,lng:130.3999,hours:"보통 10:00–20:00 (확인 필요)",verified:true,desc:"텐진 아래로 약 600m 이어진 지하 쇼핑가예요. 패션과 잡화 가게가 150곳 넘게 있어요. 비나 추위를 피할 수 있고 다이마루, 미쓰코시, 파르코, 미나텐진과 지하로 연결돼서 할머니랑 다니기 편해요. 이번 겨울에도 새 가게가 계속 들어왔어요."},
+ {id:"mina",cat:"dept",ko:"미나 텐진",ja:"ミーナ天神",addr:"福岡市中央区天神4-3-8",lat:33.5937,lng:130.3990,hours:"10:00–20:00",verified:true,desc:"유니클로·GU 대형 매장(확인 필요)과 로프트(4F)가 있는 생활 쇼핑몰이에요. 로프트는 면세 접수를 19:30까지 받아요."},
+ {id:"shintencho",cat:"dept",ko:"신텐초 상점가",ja:"新天町商店街",addr:"福岡市中央区天神2丁目",lat:33.5905,lng:130.3962,hours:"가게마다 다름",verified:false,desc:"텐진의 오래된 지붕 있는 상점가예요. 잡화, 과자, 기념품 가게가 모여 있어요."},
+ {id:"amuest",cat:"dept",ko:"아뮤 에스트",ja:"アミュエスト",addr:"JR博多駅 博多口 B1F–1F",lat:33.5892,lng:130.4201,hours:"10:00–20:00",verified:true,desc:"하카타역에 있는 젊은 층 패션·잡화몰이에요. 아뮤플라자와 붙어 있어요."},
+ {id:"deitos",cat:"dept",ko:"하카타 데이토스",ja:"博多デイトス",addr:"JR博多駅 筑紫口側",lat:33.5899,lng:130.4224,hours:"확인 필요",verified:false,desc:"하카타역 지쿠시 출구 쪽에 있는 쇼핑몰이에요. 명란, 토리몬 같은 후쿠오카 선물 매장이 몰려 있어서 마지막 날 선물 사기에 제일 좋아요."},
+ {id:"patagonia",cat:"shop",ko:"파타고니아 후쿠오카",ja:"パタゴニア 福岡 (天神ビジネスセンター 1F)",addr:"福岡市中央区天神1丁目 天神ビジネスセンター 1F",lat:33.5913,lng:130.4008,hours:"확인 필요",verified:true,desc:"규슈에 하나뿐인 파타고니아 직영점이에요. 텐진역과 바로 연결돼요. 2022년에 이곳으로 옮겼고, 지금도 같은 자리인지는 가기 전에 확인하세요."},
+ {id:"montbell-tenjin",cat:"shop",ko:"몽벨 후쿠오카 텐진점",ja:"モンベル 福岡天神店",addr:"福岡市中央区天神2-4-38 NTT-KFビル 1F",lat:33.5886,lng:130.3964,hours:"10:30–21:00 · 연중무휴",verified:true,desc:"규슈 최대 규모의 몽벨 직영점이에요. 케고 공원 바로 옆에 있고 후쿠오카 한정 티셔츠도 있어요. ☎ 092-718-2402"},
+ {id:"montbell-canal",cat:"shop",ko:"몽벨 캐널시티 하카타점",ja:"モンベル キャナルシティ博多店 (サウスビル 2F)",addr:"福岡市博多区住吉1-2-74 キャナルシティ博多 サウスビル 2F",lat:33.5888,lng:130.4104,hours:"10:00–21:00 · 연중무휴",verified:true,desc:"약 220평 규모의 큰 매장이고 팩토리 아울렛 상품도 팔아요. 숙소에서 걸어갈 수 있어요. ☎ 092-283-5070"},
+ {id:"cdg",cat:"shop",ko:"꼼데가르송 후쿠오카",ja:"コム デ ギャルソン 福岡店",addr:"福岡市博多区博多駅前1-28-8",lat:33.5922,lng:130.4152,taxi:"택시 3분 · 걸어서 6분",hours:"확인 필요",verified:true,desc:"이전하면서 매장이 넓어졌어요. 숙소에서 가까워요."},
+ {id:"arcteryx",cat:"shop",ko:"아크테릭스 텐진 브랜드 스토어",ja:"アークテリクス 福岡天神ブランドストア",addr:"福岡市中央区大名1-12-62",lat:33.5887,lng:130.3934,taxi:"택시 12분",hours:"11:00–19:00",verified:true,desc:"규슈 첫 단독 매장이에요. 다이묘 골목에 있어서 텐진 쇼핑하는 날 같이 가면 돼요."},
+ {id:"daimyo",cat:"shop",ko:"다이묘·이마이즈미 빈티지 골목",ja:"大名・今泉 古着エリア",addr:"福岡市中央区大名1丁目",lat:33.5880,lng:130.3945,taxi:"택시 12분",hours:"대개 11~12시 오픈",desc:"후쿠오카의 빈티지 가게와 편집숍이 몰려 있는 골목이에요. 걷는 길이 많아서 할머니는 근처 카페에서 쉬시고 나머지 가족만 둘러보는 걸 추천해요. 구글맵에서 '大名 古着'로 검색하면 가게가 쭉 나와요."},
+ {id:"ragtag",cat:"shop",ko:"RAGTAG 후쿠오카 (디자이너 중고)",ja:"RAGTAG 福岡店",addr:"福岡市中央区大名1-15-31",lat:33.5872,lng:130.3938,taxi:"택시 12분",hours:"11:00–20:00",verified:true,desc:"명품과 디자이너 브랜드를 파는 중고 편집숍이에요. 꼼데가르송, 요지야마모토 같은 브랜드를 싸게 건질 수 있어요."},
+ {id:"apc",cat:"shop",ko:"A.P.C. 후쿠오카",ja:"A.P.C. 福岡店",addr:"福岡市中央区大名1-13-21",lat:33.5891,lng:130.3941,taxi:"택시 12분",hours:"확인 필요",verified:true,desc:"다이묘 골목에 있는 단독 매장이에요. 아크테릭스와 가까워요."},
+ {id:"selects",cat:"shop",ko:"텐진 편집숍 (빔즈·UA·저널·론허먼)",ja:"BEAMS 福岡 / UNITED ARROWS 福岡店",addr:"福岡市中央区天神",lat:33.5897,lng:130.3962,taxi:"택시 10분",hours:"확인 필요",verified:false,desc:"텐진에는 BEAMS 후쿠오카, UNITED ARROWS 후쿠오카, JOURNAL STANDARD 후쿠오카, Ron Herman 후쿠오카가 있어요. 정확한 위치를 확인하지 못해서 핀은 텐진 근처에 대략 찍었어요. 매장마다 구글맵으로 검색해서 가세요. 하카타역 아뮤플라자 3F에도 빔즈, 십스, 유나이티드 애로우즈가 있어요."},
+ {id:"loft",cat:"life",ko:"텐진 로프트",ja:"天神ロフト (ミーナ天神 4F)",addr:"福岡市中央区天神4丁目 ミーナ天神4F",lat:33.5933,lng:130.3998,taxi:"택시 10분",hours:"확인 필요",verified:true,desc:"2023년에 미나텐진 4층으로 옮겼어요. 문구, 화장품, 생활잡화를 팔고 선물 사기 좋아요."},
+ {id:"moma",cat:"life",ko:"MoMA 디자인 스토어",ja:"MoMA Design Store 福岡 (ONE FUKUOKA BLDG. 2F)",addr:"福岡市中央区天神1-11-1 2F",lat:33.5909,lng:130.3999,taxi:"택시 10분",hours:"확인 필요",verified:true,desc:"원 후쿠오카 빌딩 2층에 있어요(2026년 봄 오픈). 디자인 소품과 선물 사기 좋아요."},
+ {id:"muji-canal",cat:"life",ko:"무인양품 캐널시티 (대형)",ja:"無印良品 キャナルシティ博多",addr:"福岡市博多区住吉1-2 キャナルシティ博多",lat:33.5892,lng:130.4116,taxi:"택시 3분 · 걸어서 7분",hours:"캐널시티 영업시간",verified:true,desc:"숙소에서 제일 가까운 대형 무인양품이고 카페 MUJI도 있어요. 아뮤플라자 6F와 다이마루 엘가라 B1에도 무인양품이 있어요."},
+ {id:"muji-daimaru",cat:"life",ko:"무인양품 다이마루 텐진 (대형)",ja:"無印良品 大丸福岡天神",addr:"福岡市中央区天神1-4-1 大丸 東館エルガーラ B1",lat:33.5868,lng:130.4016,taxi:"택시 10분",hours:"10:00–20:00",verified:true,desc:"텐진 지역에서 가장 큰 무인양품이에요. 다이마루 엘가라관 지하 1층에 있어요."},
+ {id:"hands",cat:"life",ko:"핸즈 하카타",ja:"ハンズ博多",addr:"JR博多シティ (アミュプラザ博多)",lat:33.5906,lng:130.4212,taxi:"택시 5분",hours:"확인 필요",verified:false,desc:"생활잡화와 문구를 파는 큰 매장이에요(구 도큐핸즈). 하카타역 건물 안에 있는 걸로 알고 있지만 직접 확인하지는 못했어요."},
+ {id:"sbux-canal",cat:"cafe",ko:"스타벅스 캐널시티",ja:"スターバックス キャナルシティ博多店 (OPA B1F)",addr:"福岡市博多区住吉1-2-22 キャナルシティ博多 OPA B1F",lat:33.5901,lng:130.4102,taxi:"택시 3분 · 걸어서 7분",hours:"8:00–22:00 (금·토 23시까지)",verified:true,desc:"숙소에서 제일 가까운 큰 스타벅스예요(66석). 굿즈가 많은 편이라 텀블러를 먼저 찾아보기 좋아요."},
+ {id:"sbux-vioro",cat:"cafe",ko:"스타벅스 리저브 텐진 VIORO",ja:"スターバックス リザーブ 天神VIORO店",addr:"福岡市中央区天神 VIORO",lat:33.5893,lng:130.3979,taxi:"택시 10분",hours:"확인 필요",verified:false,desc:"텐진에서 넓고 여유로운 리저브 매장이에요. 이와타야 바로 근처라 쇼핑하다 쉬기 좋아요."},
+ {id:"sbux-hakata",cat:"cafe",ko:"스타벅스 하카타역",ja:"スターバックス 博多駅",addr:"JR博多駅",lat:33.5908,lng:130.4224,taxi:"택시 5분",hours:"매장마다 다름",verified:false,desc:"하카타역 안팎에 스타벅스가 여러 곳 있어요. 2025년에는 하카타 출구 쪽에 티 음료 특화 매장도 생겼어요. 참고로 '리저널 랜드마크 스토어'인 오호리 공원점은 숙소에서 택시로 약 20분 거리예요."},
+ {id:"canvas",cat:"cafe",ko:"캔버스 라운지 (나카스 강변)",ja:"CANVAS LOUNGE (ザ ロイヤルパーク キャンバス 福岡中洲 2F)",addr:"福岡市博多区中洲 ザ ロイヤルパーク キャンバス福岡中洲 2F",lat:33.5947,lng:130.4074,taxi:"택시 5분",hours:"확인 필요",verified:true,desc:"하카타강이 내려다보이는 호텔 2층 라운지 카페예요. 창이 커서 시원하고, 할머니 모시고 오래 앉아 있기 좋아요."},
+ {id:"manu",cat:"cafe",ko:"마누 커피 하루요시",ja:"manu coffee 春吉店",addr:"福岡市中央区春吉",lat:33.5878,lng:130.4048,taxi:"택시 7분",hours:"확인 필요",verified:false,desc:"후쿠오카 사람들이 아끼는 동네 로스터리예요. 좌석이 많지 않아서 테이크아웃하기 좋아요."},
+ {id:"fuk",cat:"cafe",ko:"FUK COFFEE",ja:"FUK COFFEE",addr:"福岡市博多区",lat:33.5940,lng:130.4112,taxi:"택시 3분 (위치 확인 필요)",hours:"확인 필요",verified:false,desc:"비행기를 콘셉트로 한 후쿠오카 커피숍이에요. 숙소 근처라고 기억하지만 위치를 확인하지 못했으니 구글맵으로 먼저 찾아보세요."},
+ {id:"yodobashi",cat:"liquor",ko:"요도바시 카메라 하카타",ja:"ヨドバシカメラ マルチメディア博多",addr:"福岡市博多区博多駅中央街6-12",lat:33.5893,lng:130.4236,taxi:"택시 5분",hours:"보통 9:30–22:00 (확인 필요)",verified:false,desc:"하카타역 지쿠시 출구 쪽에 있는 대형 매장이에요. 대형 가전 매장은 보통 주류 코너에 일본 위스키(야마자키, 하쿠슈, 히비키 등)를 갖춰 두지만, 이 매장 재고는 확인하지 못했어요. 인기 위스키는 1인당 구매 수량 제한이 있을 수 있어요."},
+ {id:"charme",cat:"liquor",ko:"샤름 뒤 뱅 (와인·위스키 전문)",ja:"リカーショップ シャルム デュ ヴァン (CHARME du VIN)",addr:"福岡市博多区祇園町 (博多警察署近く)",lat:33.5937,lng:130.4106,taxi:"숙소 근처 · 걸어서 갈 거리",hours:"10:00–20:00 · 일요일·공휴일 휴무 (확인 필요)",verified:true,desc:"기온마치에 있는 양주 전문점이에요. 와인과 위스키 위주로 진, 브랜디, 리큐어까지 다 있어요. 숙소와 같은 동네라 제일 편하게 갈 수 있어요. 다만 일요일과 공휴일(11/22, 11/23)은 쉬니 화·수에 가세요. ☎ 092-292-5171"},
+ {id:"likaman-nakasu",cat:"liquor",ko:"리커 마운틴 나카스 고쿠타이도로점",ja:"リカーマウンテン 中洲国体道路店",addr:"福岡市博多区中洲2-2-2",lat:33.5899,lng:130.4057,taxi:"택시 5분",hours:"오후부터 영업 · 일요일 휴무 (확인 필요)",verified:true,desc:"전국 주류 체인으로 면세가 되는 매장이에요. 리커 마운틴은 일부 매장에 위스키 약 500종을 갖춘 'Whisky Kingdom' 코너를 두는데, 이 매장에도 있는지는 확인하지 못했어요. ☎ 092-283-6667"},
+ {id:"bic-tenjin",cat:"liquor",ko:"빅 주류 판매점 (빅카메라 텐진 1호관)",ja:"ビック酒販 天神1号店 (ビックカメラ天神1号館)",addr:"福岡市中央区今泉1-25-1",lat:33.5893,lng:130.3965,taxi:"택시 10분",hours:"10:00–21:00 · 연중무휴",verified:true,desc:"빅카메라 안에 있는 주류 매장이에요. 위스키 종류가 많고 텐진 쇼핑하는 날 같이 들르기 좋아요."},
+ {id:"mycellar",cat:"liquor",ko:"MYCELLAR by JOYLAB (위스키 전문)",ja:"MYCELLAR by JOYLAB (アベニュー天神 1F)",addr:"福岡市中央区今泉1-22-20 アベニュー天神 1F",lat:33.5866,lng:130.3953,taxi:"택시 10분",hours:"10:00–19:00 · 목요일 휴무",verified:true,desc:"일본 위스키 전문점이에요. 타케츠루, 하쿠슈, 산토리 라인을 다루고 번역 도구도 있어요. 인기 제품은 미리 연락해서 재고를 물어보는 게 좋아요. 정보는 매장이 직접 쓴 글 기준이에요."},
+ {id:"yamaya-daimyo",cat:"liquor",ko:"주류점 야마야 다이묘점",ja:"やまや 大名店",addr:"福岡市中央区大名",lat:33.5879,lng:130.3924,taxi:"택시 12분",hours:"10:00–22:00",verified:false,desc:"전국 체인 주류 할인점이에요. 위스키, 사케, 맥주를 무난한 가격에 살 수 있어요. 정확한 주소는 구글맵으로 확인하세요."},
+ {id:"kakuyasu-daimyo",cat:"liquor",ko:"카쿠야스 다이묘점",ja:"なんでも酒や カクヤス 大名店",addr:"福岡市中央区大名",lat:33.5898,lng:130.3929,taxi:"택시 12분",hours:"10:00–22:00",verified:false,desc:"도쿄 계열 주류 체인이에요. 밤 10시까지 열어서 저녁 먹고 가기 좋아요. 정확한 주소는 구글맵으로 확인하세요."},
+ {id:"kawabata-whisky",cat:"liquor",ko:"가와바타 위스키 (위스키 전문)",ja:"元町WHISKY 川端WHISKY",addr:"福岡市博多区上川端町 周辺",lat:33.5950,lng:130.4082,taxi:"택시 5분 (위치 확인 필요)",hours:"12:00–20:00",verified:false,desc:"위스키 전문점이에요. 텐진에서 약 800m 떨어진 가와바타 상점가 쪽으로 보여서 숙소에서 가까울 수 있어요. 위치는 구글맵으로 먼저 확인하세요."},
+ {id:"linxas",cat:"liquor",ko:"Linxas 보틀숍",ja:"Linxas Bottle Shop (天神)",addr:"福岡市中央区天神 周辺",lat:33.5912,lng:130.3970,taxi:"택시 10분 (위치 확인 필요)",hours:"확인 필요",verified:false,desc:"여행자 후기에 따르면 히비키나 야마자키를 돈키호테보다 조금 싸게 팔고 면세도 된대요. 다만 1년도 더 된 후기예요. 위치는 구글맵으로 확인하세요."},
+ {id:"donki-nakasu",cat:"donki",ko:"돈키호테 나카스점",ja:"ドン・キホーテ 中洲店",addr:"福岡市博多区中洲",lat:33.5928,lng:130.4052,taxi:"택시 5분",hours:"24시간",verified:false,desc:"숙소에서 제일 가까운 돈키호테예요. 저녁 먹고 들르기 좋아요."},
+ {id:"donki-tenjin",cat:"donki",ko:"돈키호테 텐진본점",ja:"ドン・キホーテ 天神本店",addr:"福岡市中央区天神3丁目",lat:33.5922,lng:130.3984,taxi:"택시 10분",hours:"확인 필요",verified:false,desc:"텐진 쇼핑하는 날 같이 들르면 돼요."},
+ {id:"tetsunabe",cat:"food",ko:"하카타 기온 테츠나베",ja:"博多祇園鉄なべ",addr:"福岡市博多区祇園町2-20",lat:33.5932,lng:130.4122,taxi:"걸어서 3분",hours:"저녁 위주 (확인 필요)",desc:"철판에 구워 나오는 한입 교자예요. 숙소 바로 옆이라 도착한 날 저녁으로 딱이에요."},
+ {id:"fullfull",cat:"bakery",ko:"더 풀풀 하카타",ja:"THE FULL FULL HAKATA",addr:"福岡市博多区祇園町9-3",lat:33.5921,lng:130.4113,taxi:"걸어서 2분",hours:"확인 필요 · 092-292-7838",verified:true,desc:"명란 바게트(明太フランス)가 유명한 빵집이에요. 숙소에서 걸어서 갈 수 있으니 아침에 가세요."},
+ {id:"dacomecca",cat:"bakery",ko:"다코메카",ja:"DACOMECCA",addr:"福岡市博多区博多駅前1丁目",lat:33.5910,lng:130.4180,taxi:"택시 4분",hours:"아침 7시경부터 (확인 필요)",desc:"화려한 빵이 진열된 인기 빵집이에요. 아침 일찍 가면 덜 붐벼요."},
+ {id:"imdonut",cat:"bakery",ko:"아임도넛? 후쿠오카",ja:"I'm donut ? 福岡",addr:"福岡市中央区天神",lat:33.5864,lng:130.4000,taxi:"택시 10분",hours:"확인 필요",desc:"생도넛 맛집이에요. 줄이 길어서 텐진 쇼핑 중간에 들르기 좋아요."},
+ {id:"yoshizuka",cat:"food",ko:"요시즈카 우나기야",ja:"吉塚うなぎ屋",addr:"福岡市博多区中洲2-8-27",lat:33.5912,lng:130.4045,taxi:"택시 6분",hours:"점심~저녁 (확인 필요)",desc:"오래된 장어 노포예요. 앉아서 편하게 먹을 수 있어서 할머니 모시고 가기 좋아요."},
+ {id:"hanamidori",cat:"food",ko:"하카타 하나미도리",ja:"博多華味鳥 中洲本店",addr:"福岡市博多区中洲",lat:33.5920,lng:130.4062,taxi:"택시 6분",hours:"저녁 (확인 필요)",desc:"맑은 닭 육수의 미즈타키(닭 전골)예요. 부드러워서 할머니 입맛에 잘 맞을 거예요."},
+ {id:"toriden",cat:"food",ko:"미즈타키 토리덴",ja:"水たき とり田 博多本店",addr:"福岡市博多区下川端町",lat:33.5942,lng:130.4078,taxi:"택시 6분",hours:"점심·저녁 (확인 필요)",desc:"미즈타키를 정갈하게 내는 곳이에요. 점심 코스가 부담이 적어요."},
+ {id:"ichiran",cat:"food",ko:"이치란 본사총본점",ja:"一蘭 本社総本店",addr:"福岡市博多区中洲5-3-2",lat:33.5957,lng:130.4062,taxi:"택시 6분",hours:"24시간",desc:"돈코츠 라멘의 정석이에요. 칸막이 좌석이라 가족이 나란히 앉기는 어려워요."},
+ {id:"ooyama",cat:"food",ko:"모츠나베 오오야마 (KITTE)",ja:"もつ鍋 おおやま KITTE博多",addr:"KITTE博多 9F",lat:33.5885,lng:130.4188,taxi:"택시 5분",hours:"확인 필요",desc:"하카타역 쇼핑하다가 바로 올라가서 먹을 수 있는 모츠나베(곱창 전골)예요."},
+ {id:"mentaiju",cat:"food",ko:"간소 하카타 멘타이쥬",ja:"元祖博多めんたい重",addr:"福岡市中央区西中洲6-15",lat:33.5903,lng:130.4028,taxi:"택시 7분",hours:"아침 7시경부터 (확인 필요)",desc:"명란 덮밥 전문점이에요. 아침부터 줄이 생기니 평일 오전에 가세요."},
+ {id:"kawataro",cat:"food",ko:"카와타로 나카스",ja:"河太郎 中洲本店",addr:"福岡市博多区中洲1丁目",lat:33.5908,lng:130.4052,taxi:"택시 6분",hours:"점심·저녁",desc:"오징어 활어회(이카 이키즈쿠리)가 유명해요. 예약하고 가는 게 좋아요."},
+ {id:"taira",cat:"food",ko:"우동 타이라",ja:"うどん平",addr:"福岡市博多区住吉5丁目",lat:33.5858,lng:130.4152,taxi:"택시 5분",hours:"점심 위주",desc:"현지인 줄이 긴 하카타 우동집이에요. 가볍게 점심 먹기 좋아요."},
+ {id:"tanya",cat:"food",ko:"탄야 하카타",ja:"たんやHAKATA",addr:"JR博多駅 博多1番街",lat:33.5895,lng:130.4212,taxi:"택시 5분",hours:"아침부터",desc:"하카타역 지하에 있는 우설 정식집이에요. 마지막 날 아침으로 좋아요."},
+ {id:"shinshin",cat:"food",ko:"라멘 신신 텐진",ja:"博多らーめん ShinShin 天神本店",addr:"福岡市中央区天神3丁目",lat:33.5893,lng:130.3955,taxi:"택시 10분",hours:"점심~심야",desc:"가벼운 돈코츠 라멘이에요. 텐진 쇼핑하다 점심으로 먹기 좋아요."}
+];
+const BYID=Object.fromEntries(P.map(p=>[p.id,p]));
+// travel times from hotel, estimated from straight-line distance x1.3 road factor; walk 75 m/min, taxi ~15 km/h + 3 min
+function moves(p){
+  if(p.cat==="hotel")return null;
+  const h=BYID.hotel,R=6371,toR=Math.PI/180;
+  const dLat=(p.lat-h.lat)*toR,dLng=(p.lng-h.lng)*toR;
+  const a=Math.sin(dLat/2)**2+Math.cos(h.lat*toR)*Math.cos(p.lat*toR)*Math.sin(dLng/2)**2;
+  const km=2*R*Math.asin(Math.sqrt(a))*1.3;
+  return {walk:Math.max(1,Math.round(km*1000/75)),taxi:Math.max(3,Math.round(km/15*60+3)),km};
+}
+const caveat=p=>/확인/.test(p.taxi||"")?" (위치 확인 필요)":"";
+
+// brand index: [display, aliases, [[storeId, floor]]]
+const B=[
+["HERMÈS","에르메스 hermes",[["hankyu","1F"],["iwataya","층 확인 필요"]]],
+["CELINE","셀린느 셀린 celine",[["hankyu","1F"],["iwataya","신관 2F"]]],
+["LOEWE","로에베 loewe",[["hankyu","1F"],["iwataya","신관 1F"],["mitsukoshi","1F"]]],
+["On (온러닝)","온러닝 온 on running onrunning",[["hankyu","8F"]]],
+["MONCLER","몽클레어 몽클레르 몽클 moncler",[["daimaru","엘가라 2F"],["iwataya","신관 2F"]]],
+["PORTER (요시다 가방)","포터 요시다 porter yoshida",[["hankyu","6F 남성가방"]]],
+["BEAMS","빔즈 beams",[["amu","3F"],["selects","텐진 매장"]]],
+["COMME des GARÇONS","꼼데가르송 꼼데 꼼데가르송 cdg commedesgarcons",[["cdg","단독 매장"],["iwataya","일부 라인, 층 확인 필요"]]],
+["ARC'TERYX","아크테릭스 아크 arcteryx",[["arcteryx","단독 매장"]]],
+["Patagonia","파타고니아 파타 patagonia",[["patagonia","텐진 직영점"]]],
+["mont-bell","몽벨 몽벨 montbell 몬벨",[["montbell-tenjin","텐진 (규슈 최대)"],["montbell-canal","캐널시티 사우스빌딩 2F"]]],
+["HELLY HANSEN","헬리한센 hellyhansen",[["hankyu","8F"]]],
+["THE NORTH FACE","노스페이스 northface",[["hankyu","8F"],["amu","5F"],["iwataya","층 확인 필요"]]],
+["Louis Vuitton","루이비통 lv louisvuitton",[["hankyu","1F"],["daimaru","엘가라 1F"]]],
+["GUCCI","구찌 gucci",[["hankyu","1F"],["daimaru","엘가라 2F · 본관 1F 액세서리"]]],
+["PRADA","프라다 prada",[["hankyu","1F"],["iwataya","본관"]]],
+["Saint Laurent","생로랑 입생로랑 ysl saintlaurent",[["hankyu","1F"]]],
+["BALENCIAGA","발렌시아가 balenciaga",[["hankyu","1F"]]],
+["FENDI","펜디 fendi",[["hankyu","1F"]]],
+["BOTTEGA VENETA","보테가베네타 보테가 bottega",[["iwataya","층 확인 필요"]]],
+["Valextra","발렉스트라 valextra",[["hankyu","1F"]]],
+["Tiffany & Co.","티파니 tiffany",[["hankyu","1F"],["daimaru","본관 1F"]]],
+["Cartier","까르띠에 cartier",[["hankyu","1F"],["daimaru","엘가라 1F·4F"]]],
+["BVLGARI","불가리 bulgari bvlgari",[["hankyu","3F"],["daimaru","엘가라 1F"]]],
+["Rolex","롤렉스 rolex",[["hankyu","3F"]]],
+["RIMOWA","리모와 rimowa",[["hankyu","3F"]]],
+["Ferragamo","페라가모 ferragamo",[["daimaru","엘가라 2F"]]],
+["Burberry","버버리 burberry",[["daimaru","엘가라 2F"]]],
+["Brunello Cucinelli","브루넬로쿠치넬리 쿠치넬리 brunellocucinelli",[["daimaru","엘가라 2F"]]],
+["GOLDEN GOOSE","골든구스 goldengoose",[["daimaru","엘가라 2F"]]],
+["Chrome Hearts","크롬하츠 chromehearts",[["daimaru","엘가라 2F"]]],
+["Jimmy Choo","지미추 jimmychoo",[["daimaru","엘가라 2F"]]],
+["Tom Ford","톰포드 tomford",[["daimaru","엘가라 2F"]]],
+["Christian Louboutin","루부탱 louboutin",[["daimaru","엘가라 2F"]]],
+["HERNO","헤르노 herno",[["daimaru","엘가라 2F"]]],
+["Versace","베르사체 versace",[["daimaru","엘가라 2F"]]],
+["Dsquared2","디스퀘어드 dsquared",[["daimaru","엘가라 2F"]]],
+["Berluti","벨루티 베를루티 berluti",[["daimaru","본관 1F"]]],
+["Coach","코치 coach",[["hankyu","4F (남성은 6F)"],["daimaru","본관 B1"]]],
+["Tory Burch","토리버치 toryburch",[["hankyu","4F"]]],
+["Kate Spade","케이트스페이드 katespade",[["hankyu","4F"]]],
+["Furla","훌라 furla",[["hankyu","4F"]]],
+["Marc Jacobs","마크제이콥스 marcjacobs",[["hankyu","4F"]]],
+["Longchamp","롱샴 longchamp",[["hankyu","4F"]]],
+["Hervé Chapelier","에르베샤플리에 에르베 herve",[["hankyu","4F"]]],
+["LeSportsac","레스포색 lesportsac",[["hankyu","4F"],["daimaru","본관 B1"]]],
+["Michael Kors","마이클코어스 michaelkors",[["daimaru","본관 B1"]]],
+["J&M Davidson","제이앤엠데이비슨 jm davidson",[["hankyu","4F"]]],
+["TATRAS","타트라스 tatras",[["hankyu","4F"]]],
+["agnès b.","아네스베 아녜스베 agnesb",[["hankyu","4F"],["daimaru","본관 B1"]]],
+["Theory","띠어리 theory",[["hankyu","5F"]]],
+["Max Mara","막스마라 maxmara",[["hankyu","5F (Weekend)"]]],
+["Pleats Please / Issey Miyake","플리츠플리즈 이세이미야케 issey pleats",[["hankyu","5F"]]],
+["BAO BAO ISSEY MIYAKE","바오바오 baobao",[["hankyu","1F"]]],
+["Homme Plissé","옴므플리세 hommeplisse",[["hankyu","2F"]]],
+["Yohji Yamamoto / Y-3","요지야마모토 와이쓰리 yohji y3",[["hankyu","2F"]]],
+["DIESEL","디젤 diesel",[["hankyu","2F"]]],
+["NEIGHBORHOOD","네이버후드 neighborhood",[["hankyu","2F"]]],
+["Polo Ralph Lauren","폴로 랄프로렌 polo ralphlauren",[["hankyu","5F·6F"],["daimaru","엘가라 3F"]]],
+["Paul Smith","폴스미스 paulsmith",[["hankyu","6F"]]],
+["TUMI","투미 tumi",[["hankyu","6F"]]],
+["Brooks Brothers","브룩스브라더스 brooksbrothers",[["hankyu","6F"]]],
+["Lacoste","라코스테 lacoste",[["hankyu","6F"]]],
+["Paraboot","파라부트 paraboot",[["hankyu","6F"]]],
+["Crockett & Jones","크로켓앤존스 crockett",[["hankyu","6F"]]],
+["ASICS","아식스 asics",[["hankyu","8F"],["daimaru","본관 B1"]]],
+["New Balance","뉴발란스 뉴발 newbalance",[["hankyu","8F"],["daimaru","본관 B1"]]],
+["Samsonite","쌤소나이트 samsonite",[["hankyu","8F"]]],
+["UGG","어그 ugg",[["amu","5F"],["daimaru","본관 B1"]]],
+["Camper","캠퍼 camper",[["hankyu","4F"],["daimaru","본관 B1"]]],
+["IL BISONTE","일비종떼 일비송떼 ilbisonte",[["amu","1F"],["daimaru","본관 1F"]]],
+["Margaret Howell","마가렛호웰 margarethowell",[["daimaru","엘가라 3F"]]],
+["Emporio Armani","엠포리오아르마니 아르마니 armani",[["daimaru","엘가라 4F"]]],
+["SHIPS","십스 ships",[["amu","3F"]]],
+["UNITED ARROWS","유나이티드애로우즈 유나이티드 unitedarrows",[["amu","3F"],["selects","텐진 매장"]]],
+["TOMORROWLAND","투모로우랜드 tomorrowland",[["amu","3F"]]],
+["EDIFICE / IÉNA","에디피스 이에나 edifice iena",[["amu","3F"]]],
+["URBAN RESEARCH","어반리서치 urbanresearch",[["amu","4F"]]],
+["DANTON","단톤 danton",[["amu","4F"]]],
+["FREAK'S STORE","프릭스스토어 freaksstore",[["amu","4F"]]],
+["BRIEFING","브리핑 briefing",[["amu","4F"]]],
+["A.P.C.","아페쎄 apc",[["amu","5F"],["apc","다이묘 단독 매장"]]],
+["SAINT JAMES","세인트제임스 생제임스 saintjames",[["amu","5F"]]],
+["HYSTERIC GLAMOUR","히스테릭글래머 hysteric",[["amu","5F"]]],
+["Mother House","마더하우스 motherhouse",[["amu","2F"],["daimaru","본관 B1"]]],
+["UNIQLO / GU","유니클로 지유 uniqlo gu",[["mina","미나텐진 (확인 필요)"]]],
+["MUJI (무인양품)","무인양품 무지 muji 무인",[["muji-canal","캐널시티 (대형)"],["muji-daimaru","다이마루 엘가라 B1 (대형)"],["amu","6F"]]],
+["LoFT","로프트 loft",[["loft","미나텐진 4F"]]],
+["Hands (핸즈)","핸즈 도큐핸즈 hands tokyuhands",[["hands","하카타역 (확인 필요)"]]],
+["MoMA Design Store","모마 moma",[["moma","원빌딩 2F"]]],
+["JOURNAL STANDARD","저널스탠다드 journalstandard",[["selects","텐진 매장"]]],
+["Ron Herman","론허먼 ronherman",[["selects","텐진 매장"]]],
+["RAGTAG (중고 명품·디자이너)","래그태그 중고 빈티지 ragtag vintage used",[["ragtag","다이묘"]]],
+["빈티지 · 古着","빈티지 구제 후루기 vintage furugi",[["daimyo","다이묘·이마이즈미 골목"],["ragtag","다이묘"]]],
+["위스키 · 주류","위스키 리쿼 리쿼샵 술 주류 샴드뱅 샤름뒤뱅 charmeduvin 리커마운틴 likaman liquormountain whisky liquor sake 사케 야마자키 히비키 하쿠슈",[["charme","숙소 근처 양주 전문점"],["likaman-nakasu","리커 마운틴 나카스"],["mycellar","위스키 전문점"],["kawabata-whisky","위스키 전문점"],["linxas","보틀숍"],["bic-tenjin","빅 주류 판매점"],["yamaya-daimyo","주류 할인점"],["kakuyasu-daimyo","주류 체인"],["yodobashi","주류 코너 (확인 필요)"],["hankyu","B1 식품관 주류 (확인 필요)"],["donki-nakasu","주류 코너"],["donki-tenjin","주류 코너"]]],
+["Starbucks (스타벅스)","스타벅스 스벅 starbucks 텀블러 투웨이 2way",[["sbux-canal","캐널시티 OPA B1"],["sbux-vioro","텐진 VIORO 리저브"],["sbux-hakata","하카타역"]]],
+["CHANEL (뷰티)","샤넬 chanel",[["hankyu","1F 화장품"],["daimaru","엘가라 1F"],["iwataya","화장품 층"]]],
+["DIOR (뷰티)","디올 dior",[["hankyu","1F·4F 화장품"],["iwataya","화장품 층"]]],
+["Jo Malone London","조말론 jomalone",[["hankyu","1F"]]],
+["SHIRO","시로 shiro",[["hankyu","1F"]]],
+["SK-II","sk2 에스케이투 skii",[["hankyu","1F"]]]
+];
+
+const norm=s=>s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[\s'’.&\-\/()·]/g,"");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const gm=p=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(p.ja+" 福岡");
+const store=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const load=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+
+/* ---------- map ---------- */
+const X0=130.389,X1=130.424,Y0=33.598,Y1=33.583,W=1000,H=560;
+const px=lng=>(lng-X0)/(X1-X0)*W, py=lat=>(Y0-lat)/(Y0-Y1)*H;
+const svg=document.getElementById("map");
+const NS="http://www.w3.org/2000/svg";
+function el(t,a,parent){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(parent||svg).appendChild(e);return e}
+function drawBase(){
+  // blocks (street grid hint)
+  const g=el("g",{fill:"var(--block)"});
+  [[70,170,250,330],[430,40,90,420],[560,120,250,150],[560,300,180,200],[820,200,170,260]].forEach(([x,y,w,h])=>el("rect",{x,y,width:w,height:h,rx:18},g));
+  // Naka river (west of Nakasu) and Hakata river (east)
+  el("path",{d:`M ${px(130.4028)} -10 C ${px(130.4032)} 120, ${px(130.4022)} 260, ${px(130.4030)} 380 S ${px(130.4040)} 520, ${px(130.4035)} 580`,stroke:"var(--river)","stroke-width":26,fill:"none","stroke-linecap":"round"});
+  el("path",{d:`M ${px(130.4078)} -10 C ${px(130.4074)} 90, ${px(130.4072)} 190, ${px(130.4060)} 290 S ${px(130.4038)} 380, ${px(130.4032)} 410`,stroke:"var(--river)","stroke-width":18,fill:"none","stroke-linecap":"round"});
+  // rail line into Hakata station
+  el("path",{d:`M ${px(130.4206)} -10 L ${px(130.4206)} 580`,stroke:"var(--line)","stroke-width":6,"stroke-dasharray":"14 8"});
+  el("rect",{x:px(130.4206)-34,y:py(33.5905)-10,width:68,height:60,rx:8,fill:"var(--line)"});
+  const L=(x,y,t,sm)=>{const e=el("text",{x,y,class:"lbl"+(sm?" sm":""),"text-anchor":"middle"});e.textContent=t};
+  L(px(130.3975),py(33.5850),"텐진");L(px(130.3935),py(33.5860),"다이묘",1);
+  L(px(130.4052),py(33.5965)+4,"나카스",1);L(px(130.4128),py(33.5950),"기온");
+  L(px(130.4206),py(33.5860),"하카타역");L(px(130.4130),py(33.5845),"스미요시",1);
+  L(px(130.4032),py(33.5838),"나카가와 강",1);
+}
+drawBase();
+const pinLayer=el("g",{});
+let active=new Set(JSON.parse(load("fk.cats")||"null")||Object.keys(CATS));
+let selected=load("fk.sel")||"hankyu";
+function drawPins(){
+  pinLayer.innerHTML="";
+  P.filter(p=>active.has(p.cat)||p.cat==="hotel").sort((a,b)=>(a.id===selected)-(b.id===selected)).forEach(p=>{
+    const g=el("g",{class:"pin "+p.cat+(p.id===selected?" sel":""),tabindex:0,role:"button","aria-label":p.ko,transform:`translate(${px(p.lng)},${py(p.lat)})`},pinLayer);
+    const r=p.cat==="hotel"?17:13;
+    if(p.cat==="hotel")el("circle",{r:30,fill:"var(--c-hotel)",opacity:.18},g);
+    el("circle",{class:"b",r,fill:`var(${CATS[p.cat].c})`},g);
+    const t=el("text",{"text-anchor":"middle",dy:"5.5"},g);t.textContent=p.cat==="hotel"?"★":CATS[p.cat].g;
+    g.addEventListener("click",()=>select(p.id));
+    g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(p.id)}});
+  });
+}
+function chips(){
+  const box=document.getElementById("catChips");box.innerHTML="";
+  Object.entries(CATS).filter(([k])=>k!=="hotel").forEach(([k,c])=>{
+    const b=document.createElement("button");b.className="chip";b.type="button";b.setAttribute("aria-pressed",active.has(k));
+    b.innerHTML=`<span class="dot" style="background:var(${c.c})"></span>${c.ko}`;
+    b.onclick=()=>{active.has(k)?active.delete(k):active.add(k);store("fk.cats",JSON.stringify([...active]));chips();drawPins();list()};
+    box.appendChild(b);
+  });
+}
+function list(){
+  const box=document.getElementById("placeList");box.innerHTML="";
+  P.filter(p=>active.has(p.cat)||p.cat==="hotel").forEach(p=>{
+    const b=document.createElement("button");b.className="pl";b.type="button";
+    b.innerHTML=`<span class="g" style="background:var(${CATS[p.cat].c});${p.cat==='donki'?'color:#1b2140':''}">${p.cat==="hotel"?"★":CATS[p.cat].g}</span><span class="n">${esc(p.ko)}</span><span class="m">${(m=>!m?"숙소":m.walk<=12?"🚶 도보 "+m.walk+"분":"🚕 택시 "+m.taxi+"분")(moves(p))}</span>`;
+    b.onclick=()=>{select(p.id);document.getElementById("sheet").scrollIntoView({behavior:"smooth",block:"nearest"})};
+    box.appendChild(b);
+  });
+}
+function select(id,hl){
+  selected=id;store("fk.sel",id);drawPins();
+  const p=BYID[id],c=CATS[p.cat];
+  const floors=p.floors?`<div class="floors">${p.floors.map(([f,t,b])=>`<div class="floor"><b>${esc(f)}</b><div>${t?`<span class="t">${esc(t)}</span>`:""}${hlText(b,hl)}</div></div>`).join("")}</div>`:"";
+  const vb=p.verified===true?`<span class="badge ok">공식 확인</span>`:p.verified===false?`<span class="badge warn">확인 필요</span>`:"";
+  document.getElementById("sheet").innerHTML=`
+    <div class="cat" style="color:var(${c.c})">${c.ko} ${vb}</div>
+    <div><h3>${esc(p.ko)}</h3><div class="ja">${esc(p.ja)}</div></div>
+    <div class="facts">${(m=>m?`<span class="fact">🚶 도보 ${m.walk}분</span><span class="fact">🚕 택시 ${m.taxi}분</span>`:"")(moves(p))}${caveat(p)?`<span class="fact">📍 위치 확인 필요</span>`:""}${p.hours?`<span class="fact">🕙 ${esc(p.hours)}</span>`:""}</div>
+    <p>${esc(p.desc)}</p>
+    <div class="actions"><button class="btn primary" type="button" id="taxiBtn">택시 카드</button><a class="btn" href="${gm(p)}" target="_blank" rel="noopener">구글맵 열기</a></div>
+    ${floors}`;
+  document.getElementById("taxiBtn").onclick=()=>openTaxi(p);
+}
+function hlText(text,hl){
+  if(!hl)return esc(text);
+  return text.split(", ").map(t=>hl.some(h=>norm(t).includes(h))?`<mark>${esc(t)}</mark>`:esc(t)).join(", ");
+}
+const taxi=document.getElementById("taxi");
+function openTaxi(p){document.getElementById("taxiDest").textContent=p.ja;document.getElementById("taxiAddr").textContent=p.addr||"";taxi.hidden=false;document.getElementById("taxiClose").focus()}
+document.getElementById("taxiClose").onclick=()=>taxi.hidden=true;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")taxi.hidden=true});
+
+/* ---------- brands ---------- */
+const q=document.getElementById("q");
+function brands(){
+  const s=norm(q.value);store("fk.q",q.value);
+  const rows=B.filter(([d,a])=>!s||norm(d).includes(s)||a.split(" ").some(x=>norm(x).includes(s)));
+  const box=document.getElementById("brandList");
+  if(!rows.length){box.innerHTML=`<p class="empty">“${esc(q.value)}” 브랜드는 아직 목록에 없어요. 하카타 한큐와 이와타야 공식 층별 안내에서 확인해 보세요.</p>`;return}
+  box.innerHTML=rows.map(([d,a,w])=>`<div class="bi"><div><div class="bn">${esc(d)}</div><div class="bk">${esc(a.split(" ")[0])}</div></div><div class="where">${w.map(([sid,f])=>`<button type="button" data-s="${sid}" data-b="${esc(d)}"><b>${esc(BYID[sid].ko)}</b> · ${esc(f)}</button>`).join("")}</div></div>`).join("");
+}
+document.getElementById("brandList").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-s]");if(!b)return;
+  const name=b.dataset.b.split(/[(\/]/)[0].trim();
+  active.add(BYID[b.dataset.s].cat);chips();list();
+  location.hash="map";select(b.dataset.s,[norm(name)]);
+  window.scrollTo({top:0});
+});
+q.addEventListener("input",brands);
+
+/* ---------- plan ---------- */
+const DAYS=[
+ {t:"1일차 · 하카타역",d:"11/22 (일)",s:[["도착","공항에서 숙소까지 택시로 약 15분, 체크인하고 짐 맡기기",["hotel"]],["오후","하카타역 쇼핑. 한큐 1F 명품, 8F On, 6F 포터, 그리고 아뮤 3F 빔즈",["hankyu","amu"]],["저녁","숙소 옆 교자집 또는 KITTE에서 모츠나베",["tetsunabe","ooyama"]],["밤","나카스 돈키호테 (24시간)",["donki-nakasu"]]]},
+ {t:"2일차 · 텐진 명품",d:"11/23 (월)",hol:true,s:[["아침","숙소 앞 풀풀에서 명란 바게트",["fullfull"]],["10:00","이와타야 → 다이마루 엘가라 (몽클레어·루이비통) → 미쓰코시 로에베 → 텐진 지하상가로 이동해서 파르코·솔라리아",["iwataya","daimaru","mitsukoshi","chikagai","parco","solaria"]],["점심","텐진에서 라멘 신신, 디저트는 아임도넛",["shinshin","imdonut"]],["오후","로프트, 다이묘의 아크테릭스·A.P.C.·빈티지 골목, 텐진 돈키호테 → 숙소에서 쉬기",["loft","arcteryx","daimyo","ragtag","donki-tenjin"]],["18:30","스미게키죠 무사시자 예약",null,"key"]]},
+ {t:"3일차 · 나카스·캐널시티",d:"11/24 (화)",s:[["아침","멘타이쥬(평일이라 줄이 짧아요) 또는 다코메카 빵",["mentaiju","dacomecca"]],["오전","캐널시티, 무인양품, 스타벅스(텀블러) → 꼼데가르송",["canal","muji-canal","sbux-canal","cdg"]],["점심","요시즈카 우나기야 (장어)",["yoshizuka"]],["오후","리버레인 → 강변 캔버스 라운지에서 쉬기, 못 산 건 하카타역에서 다시",["riverain","canvas","hankyu"]],["저녁","미즈타키 하나미도리 또는 토리덴",["hanamidori","toriden"]]]},
+ {t:"4일차 · 귀국",d:"11/25 (수)",s:[["아침","탄야 하카타 우설 정식",["tanya"]],["오전","하카타 데이토스에서 선물 사기 (토리몬, 멘베이, 명란), 위스키는 요도바시에서 마지막으로 확인",["deitos","amu","yodobashi"]],["출국","환급형 면세라 공항 세관 수속 시간을 넉넉히 잡으세요",null,"key"]]}
+];
+document.getElementById("days").innerHTML=DAYS.map(d=>`<article class="day"><header><h3>${d.t}</h3><span class="date">${d.d}${d.hol?'<span class="hol">공휴일</span>':""}</span></header>${d.s.map(([tm,txt,ids,k])=>`<div class="step ${k||""}"><span class="tm">${tm}</span><div>${esc(txt)}${ids?`<div>${ids.map(i=>`<button type="button" data-go="${i}">${esc(BYID[i].ko)}</button>`).join(" · ")}</div>`:k&&tm==="18:30"?`<div><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("すみ劇場 むさし坐 福岡")}" target="_blank" rel="noopener">구글맵에서 위치 확인</a></div>`:""}</div></div>`).join("")}</article>`).join("");
+document.getElementById("days").addEventListener("click",e=>{const b=e.target.closest("button[data-go]");if(!b)return;active.add(BYID[b.dataset.go].cat);chips();list();location.hash="map";select(b.dataset.go);window.scrollTo({top:0})});
+
+/* ---------- router ---------- */
+function route(){
+  const v=["map","brands","plan","memo"].includes(location.hash.slice(1))?location.hash.slice(1):"map";
+  ["map","brands","plan","memo"].forEach(k=>document.getElementById("v-"+k).hidden=k!==v);
+  document.querySelectorAll(".tabs a").forEach(a=>{if(a.dataset.v===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+}
+window.addEventListener("hashchange",route);
+q.value=load("fk.q")||"";
+chips();drawPins();list();select(BYID[selected]?selected:"hankyu");brands();route();
+</script>
+
+</html>
