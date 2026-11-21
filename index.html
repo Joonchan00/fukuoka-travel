@@ -137,6 +137,8 @@ mark{background:color-mix(in srgb,var(--gold) 35%,transparent);color:inherit;bor
 .dki .tag{font-weight:700;font-size:11px;padding:1px 7px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
 .dki a{color:var(--indigo)}
 .dk-count{font-size:13px;color:var(--muted)}
+.chip.cart{border-color:var(--indigo);color:var(--indigo);font-weight:700}
+.chip.cart[aria-pressed="false"]{opacity:1}
 footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
 @media (prefers-reduced-motion:no-preference){.pin circle.b{transition:stroke-width .15s}}
 </style>
@@ -188,7 +190,7 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 24px}
   <!-- DONKI -->
   <section class="view" id="v-donki" hidden>
     <h2>돈키호테 쇼핑 리스트</h2>
-    <p class="sub">체크한 항목은 이 휴대폰에 저장돼요. 직원에게 일본어 이름을 보여주면 위치를 알려줘요. 사진은 "사진 보기"를 누르면 이미지 검색으로 열려요.</p>
+    <p class="sub">체크한 항목은 이 휴대폰에 저장되고, 🛒 장바구니 버튼을 누르면 담은 것만 모아 볼 수 있어요. 직원에게 일본어 이름을 보여주면 위치를 알려줘요. 사진은 "사진 보기"를 누르면 이미지 검색으로 열려요.</p>
     <div class="dk-filters" id="dkFilters"></div>
     <p class="dk-count" id="dkCount"></p>
     <div class="dk" id="dkList"></div>
@@ -637,20 +639,31 @@ const DK=[
  ["초콜릿","포키 한정맛","ポッキー 限定","일본에서만 나오는 맛이 있어요.",""],
  ["초콜릿","메이지 더 초콜릿","明治 ザ・チョコレート","카카오 함량별로 나온 고급 판 초콜릿이에요. 어른 선물용으로 좋아요.",""],
  ["초콜릿","도쿄바나나 / 시로이코이비토 (있으면)","東京ばな奈 / 白い恋人","돈키호테에서 가끔 파는 유명 과자 선물이에요.",""],
+ ["화장품","비오레 UV 아쿠아리치 (선크림)","ビオレUV アクアリッチ ウォータリーエッセンス","가볍게 발리는 선크림이에요. 한국보다 훨씬 싸서 여러 개 사가는 사람이 많아요.",""],
+ ["화장품","멜라노CC (비타민C 세럼)","メラノCC 薬用しみ集中対策美容液","잡티 케어용으로 유명한 저렴한 비타민C 세럼이에요.",""],
+ ["화장품","하다라보 고쿠쥰 (보습 토너)","肌ラボ 極潤ヒアルロン液","끈적이지 않는 히알루론산 보습 토너예요. 리필 팩이 더 싸요.",""],
+ ["화장품","센카 퍼펙트 휩 (폼클렌저)","専科 パーフェクトホイップ","거품이 쫀쫀한 세안 폼이에요. 여러 개 묶음이 저렴해요.",""],
+ ["화장품","룰루룬 마스크팩","ルルルン フェイスマスク","하루 한 장씩 쓰는 대용량 마스크팩이에요. 지역 한정 패키지가 선물용으로 좋아요.",""],
+ ["화장품","피노 헤어 마스크","フィーノ プレミアムタッチ 浸透美容液ヘアマスク","씻어내는 헤어 트리트먼트예요. 머릿결이 확 부드러워진다고 해서 인기가 많아요.",""],
+ ["화장품","&honey 샴푸·트리트먼트","&honey シャンプー","꿀 성분의 보습 샴푸예요. 여행용 미니 세트도 있어요.",""],
+ ["화장품","소프티모 클렌징 오일","ソフティモ スピーディ クレンジングオイル","저렴하고 잘 지워지는 클렌징 오일이에요.",""],
+ ["화장품","DHC 립크림","DHC 薬用リップクリーム","작고 싸서 나눠주기 좋은 립밤이에요.",""],
+ ["화장품","키스미 히로인메이크 마스카라","ヒロインメイク マスカラ","번지지 않는 마스카라로 유명해요.",""],
+ ["화장품","캔메이크 (아이섀도·블러셔)","キャンメイク","저렴한 일본 색조 브랜드예요. 진열대가 따로 있어요.",""],
+ ["화장품","큐렐 (민감 피부 보습)","キュレル","건조하고 예민한 피부용 크림·로션이에요. 할머니·엄마 보습용으로 좋아요.",""],
  ["기타 추천","로이히츠보코 (동전 파스)","ロイヒつぼ膏","어깨나 허리 결릴 때 붙이는 동전 크기 파스예요. 할머니께 좋아요.",""],
  ["기타 추천","휴족시간 (발 쿨링 시트)","休足時間","많이 걸은 날 종아리에 붙이고 자는 쿨링 시트예요.",""],
  ["기타 추천","메구리즘 (온열 안대)","めぐりズム 蒸気でホットアイマスク","뜯으면 따뜻해지는 일회용 수면 안대예요.",""],
- ["기타 추천","비오레 UV 아쿠아리치 (선크림)","ビオレUV アクアリッチ","일본에서 사는 게 훨씬 싼 선크림이에요.",""],
- ["기타 추천","멜라노CC (비타민C 세럼)","メラノCC","저렴한 비타민C 세럼이에요.",""],
  ["기타 추천","산토리 가쿠 하이볼 캔","角ハイボール 缶","호텔에서 마시기 좋은 하이볼 캔이에요.",""]
 ];
 const dkKey="fk.donki5";let dkDone=new Set();try{dkDone=new Set(JSON.parse(localStorage.getItem(dkKey)||"[]"))}catch(e){}
 let dkCat="전체";
 function dkRender(){
-  const cats=["전체",...new Set(DK.map(d=>d[0]))];
-  document.getElementById("dkFilters").innerHTML=cats.map(c=>`<button type="button" class="chip" aria-pressed="${c===dkCat}" data-c="${c}">${c}</button>`).join("");
-  const rows=DK.map((d,i)=>[d,i]).filter(([d])=>dkCat==="전체"||d[0]===dkCat);
+  const nCart=DK.filter(d=>dkDone.has(d[2])).length;const cats=["전체",...new Set(DK.map(d=>d[0])),"장바구니"];
+  document.getElementById("dkFilters").innerHTML=cats.map(c=>`<button type="button" class="chip${c==="장바구니"?" cart":""}" aria-pressed="${c===dkCat}" data-c="${c}">${c==="장바구니"?"🛒 장바구니 "+nCart:c}</button>`).join("");
+  const rows=DK.map((d,i)=>[d,i]).filter(([d])=>dkCat==="전체"||(dkCat==="장바구니"?dkDone.has(d[2]):d[0]===dkCat));
   document.getElementById("dkCount").textContent=`${DK.filter(d=>dkDone.has(d[2])).length} / ${DK.length}개 담음`;
+  if(dkCat==="장바구니"&&!rows.length){document.getElementById("dkList").innerHTML=`<p class="empty">아직 담은 게 없어요. 목록에서 체크하면 여기에 모여요.</p>`;return}
   document.getElementById("dkList").innerHTML=rows.map(([[c,ko,ja,desc,must],i])=>`<label class="dki${dkDone.has(ja)?" done":""}"><input type="checkbox" id="dk${i}" data-i="${i}" ${dkDone.has(ja)?"checked":""}><div><div class="nm">${esc(ko)}</div><span class="jp">${esc(ja)}</span><p>${esc(desc)}</p><div class="row"><span class="tag">${esc(c)}</span>${must?`<span class="tag" style="color:var(--indigo);border-color:var(--indigo)">꼭 사기</span>`:""}<a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(ja)}" target="_blank" rel="noopener">사진 보기 ↗</a></div></div></label>`).join("");
 }
 document.getElementById("dkFilters").addEventListener("click",e=>{const b=e.target.closest("button[data-c]");if(!b)return;dkCat=b.dataset.c;dkRender()});
