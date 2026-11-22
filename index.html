@@ -716,12 +716,14 @@ const DAYS=[
   ["16:00","니쿠이치 하카타 줄서기 (17시 오픈)",["nikuichi"],"key"],
   ["저녁 후","호텔 체크인 → 대욕탕",["hotel"],"key"]]},
  {t:"2일차 · 텐진",d:"11/23 (월)",hol:true,s:[
-  ["아침","호텔 조식",null,"key"],
-  ["10:00","텐진 백화점: 이와타야 → 다이마루 (공휴일이라 붐벼요)",["iwataya","daimaru"],"key"],
-  ["쇼핑","호카, 스투시, 슈프림, 몽벨, 리바이스",["stussy-tenjin","supreme","montbell-tenjin","levis"],"key"],
-  ["점심","우동: 미쓰코시 옆 이나바 우동(가장 편해요) / 니와카야 초스케 / 다이묘 가마키리 우동. 원 빌딩 B2 만다 우동도 있어요",["inaba-tenjin","niwakaya","kamakiri","onebldg"],"key"],
-  ["제안","할머니가 힘드시면 미쓰코시 5F 키하치 카페나 원 빌딩 1F 호텔 카페에서 쉬기, 또는 오후에 호텔에서 잠깐 쉬기",["mitsukoshi","onebldg"]],
-  ["18:45","스미게키죠 무사시자 예약",null,"key"]]},
+  ["10:30","숙소 출발 → 원 후쿠오카 빌딩 (택시 약 10분)",["hotel","onebldg"],"key"],
+  ["점심","원 빌딩 B2 만다 우동 (우엉튀김·소고기 우동). 공휴일엔 건물이 10시에 열어요",["onebldg"],"key"],
+  ["쇼핑","옆으로 이동해서 큰 빔즈 매장 → 바로 옆 호카 매장 훑기",["selects"],"key"],
+  ["카페","스타벅스 (가까운 곳: 원 빌딩 4F 츠타야 · 파르코 신관 4F · VIORO 리저브 · 이와타야 신관 B2)",["sbux-vioro","onebldg","parco"],"key"],
+  ["오후","이와타야 층별로 다 훑기 (본관·신관)",["iwataya"],"key"],
+  ["이동","캐널시티 (택시 약 10분) → 노스빌딩 2F 오니츠카 타이거",["canal"],"key"],
+  ["18:45","스미게키죠 무사시자",null,"key"],
+  ["공연 후","숙소 복귀",["hotel"],"key"]]},
  {t:"3일차 · 텐진 2라운드",d:"11/24 (화)",s:[
   ["아침","풀풀 베이커리 (명란 바게트, 우유 등)",["fullfull"],"key"],
   ["낮","텐진 백화점: 2일차에 못 본 미쓰코시·파르코·솔라리아·원빌딩",["mitsukoshi","parco","solaria","onebldg"],"key"],
@@ -837,5 +839,3 @@ window.addEventListener("hashchange",route);
 q.value=load("fk.q")||"";
 chips();drawPins();list();select(BYID[selected]?selected:"hankyu");brands();route();
 </script>
-
-</html>
